@@ -594,4 +594,11 @@ config LEDS_TRIGGER_SLEEP
 comment "iptables trigger is under Netfilter config (LED target)"
 	depends on LEDS_TRIGGERS
 
+comment "LED Flashlights"
+
+config FLASHLIGHT_AAT
+	tristate "flashlight AAT1271/7"
+	help
+	  Say Y here to enable the AAT flashlight
+
 endif # NEW_LEDS
