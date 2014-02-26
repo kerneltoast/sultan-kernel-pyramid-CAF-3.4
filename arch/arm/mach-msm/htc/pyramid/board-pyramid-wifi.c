@@ -83,7 +83,7 @@ static struct resource pyramid_wifi_resources[] = {
 #ifdef HW_OOB
 		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE,
 #else
-		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL,
 #endif
 	},
 };
@@ -281,4 +281,3 @@ int __init pyramid_wifi_init(void)
 	ret = platform_device_register(&pyramid_wifi_device);
 	return ret;
 }
-
