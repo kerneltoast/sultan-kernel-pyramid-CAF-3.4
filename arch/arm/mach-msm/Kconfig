@@ -925,6 +925,8 @@ endmenu
 
 source "arch/arm/mach-msm/lge/Kconfig"
 
+source "arch/arm/mach-msm/htc/Kconfig"
+
 config MSM_STACKED_MEMORY
 	bool "Stacked Memory"
 	default y
@@ -2598,4 +2600,13 @@ config MSM_USE_USER_ACCESSIBLE_TIMERS
 	  Enables MSM-specific user accessible timers via a shared
 	  memory page containing the cycle counter.
 
+
+config REMOVE_SMI_2X_CLK
+       bool "remove 2x_axi_clk for SMI"
+       default n
+
+config L2_FREQ_FIXUP
+       bool "Some msm8x60 doesn't like low freqs"
+       depends on ARCH_MSM8X60
+       default n
 endif

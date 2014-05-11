@@ -1,0 +1,7 @@
+#
+# Makefile for the HTC board
+#
+
+# PYRAMID
+obj-$(CONFIG_MACH_PYRAMID) += pyramid/
+
