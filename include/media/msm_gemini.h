@@ -48,19 +48,13 @@
 #define MSM_GMN_IOCTL_HW_CMDS \
 	_IOW(MSM_GMN_IOCTL_MAGIC, 14, struct msm_gemini_hw_cmds *)
 
-#define MSM_GMN_IOCTL_SET_MODE \
-	_IOW(MSM_GMN_IOCTL_MAGIC, 16, enum msm_gmn_out_mode)
+#define MSM_GMN_IOCTL_TEST_DUMP_REGION \
+	_IOW(MSM_GMN_IOCTL_MAGIC, 15, unsigned long)
 
 #define MSM_GEMINI_MODE_REALTIME_ENCODE 0
 #define MSM_GEMINI_MODE_OFFLINE_ENCODE 1
 #define MSM_GEMINI_MODE_REALTIME_ROTATION 2
 #define MSM_GEMINI_MODE_OFFLINE_ROTATION 3
-
-enum msm_gmn_out_mode {
-	MSM_GMN_OUTMODE_FRAGMENTED,
-	MSM_GMN_OUTMODE_SINGLE
-};
-
 struct msm_gemini_ctrl_cmd {
 	uint32_t type;
 	uint32_t len;
@@ -99,22 +93,22 @@ struct msm_gemini_hw_cmd {
 
 	uint32_t type:4;
 
-	/* n microseconds of timeout for WAIT */
-	/* n microseconds of time for DELAY */
-	/* repeat n times for READ/WRITE */
-	/* max is 0xFFF, 4095 */
+	
+	
+	
+	
 	uint32_t n:12;
 	uint32_t offset:16;
 	uint32_t mask;
 	union {
-		uint32_t data;   /* for single READ/WRITE/WAIT, n = 1 */
-		uint32_t *pdata;   /* for multiple READ/WRITE/WAIT, n > 1 */
+		uint32_t data;   
+		uint32_t *pdata;   
 	};
 };
 
 struct msm_gemini_hw_cmds {
-	uint32_t m; /* number of elements in the hw_cmd array */
+	uint32_t m; 
 	struct msm_gemini_hw_cmd hw_cmd[1];
 };
 
-#endif /* __LINUX_MSM_GEMINI_H */
+#endif 
