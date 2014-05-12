@@ -107,7 +107,7 @@ endif
 
 EXTRA_CFLAGS += -I$(M)/$(MLLITE_DIR) \
                 -I$(M)/../../include \
-		-Idrivers/input/misc/mpu3050 \
+		-Idrivers/input/misc/mpu3050_htc \
                 -Iinclude/linux
 
 obj-$(CONFIG_MPU_SENSORS_MPU6000)+= mpu6000.o

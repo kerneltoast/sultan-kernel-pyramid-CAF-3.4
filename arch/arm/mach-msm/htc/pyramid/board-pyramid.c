@@ -38,8 +38,6 @@
 #include <linux/i2c/isa1200.h>
 #include <linux/dma-mapping.h>
 #include <linux/i2c/bq27520.h>
-#include <linux/atmel_qt602240.h>
-#include <linux/input/cy8c_cs.h>
 #include <linux/cy8c_tma_ts.h>
 #include <linux/isl29028.h>
 #include <linux/isl29029.h>
