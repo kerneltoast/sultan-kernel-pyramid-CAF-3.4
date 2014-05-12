@@ -79,7 +79,7 @@ module_param(streaming, uint, S_IRUGO | S_IWUSR);
  *****************************************************************************/
 
 #define DMA_ADDR_INVALID	(~(dma_addr_t)0)
-#define USB_MAX_TIMEOUT		100 /* 100msec timeout */
+#define USB_MAX_TIMEOUT		25 /* 25msec timeout */
 #define EP_PRIME_CHECK_DELAY	(jiffies + msecs_to_jiffies(1000))
 #define MAX_PRIME_CHECK_RETRY	3 /*Wait for 3sec for EP prime failure */
 
@@ -3643,6 +3643,10 @@ static irqreturn_t udc_irq(void)
 		if (USBi_URI & intr) {
 			isr_statistics.uri++;
 			isr_reset_handler(udc);
+#if defined(CONFIG_MACH_HTC) && defined(CONFIG_USB_MSM_OTG)
+			if (udc->transceiver)
+				udc->transceiver->notify_usb_attached();
+#endif
 		}
 		if (USBi_PCI & intr) {
 			isr_statistics.pci++;

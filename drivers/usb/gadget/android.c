@@ -1562,24 +1562,39 @@ static int mass_storage_function_init(struct android_usb_function *f,
 	struct fsg_common *common;
 	int err;
 	int i;
-	const char *name[2];
 
 	config = kzalloc(sizeof(struct mass_storage_function_config),
 								GFP_KERNEL);
 	if (!config)
 		return -ENOMEM;
 
-	config->fsg.nluns = 1;
-	name[0] = "lun";
-	if (dev->pdata && dev->pdata->cdrom) {
-		config->fsg.nluns = 2;
-		config->fsg.luns[1].cdrom = 1;
-		config->fsg.luns[1].ro = 1;
-		config->fsg.luns[1].removable = 1;
-		name[1] = "lun0";
+	if (dev->pdata && dev->pdata->nluns) {
+		config->fsg.nluns = dev->pdata->nluns;
+		if (config->fsg.nluns > FSG_MAX_LUNS)
+			config->fsg.nluns = FSG_MAX_LUNS;
+		for (i = 0; i < config->fsg.nluns; i++) {
+			config->fsg.luns[i].cdrom = 0;
+			config->fsg.luns[i].removable = 1;
+			config->fsg.luns[i].ro = 0;
+		}
+		if (dev->pdata->cdrom) {
+			config->fsg.nluns += 1;
+			config->fsg.luns[i+1].cdrom = 1;
+			config->fsg.luns[i+1].removable = 1;
+			config->fsg.luns[i+1].ro = 1;
+		}
+	} else {
+		config->fsg.nluns = 1;
+		config->fsg.luns[0].cdrom = 0;
+		config->fsg.luns[0].removable = 1;
+		config->fsg.luns[0].ro = 0;
+		if (dev->pdata && dev->pdata->cdrom) {
+			config->fsg.nluns = 2;
+			config->fsg.luns[1].cdrom = 1;
+			config->fsg.luns[1].removable = 1;
+			config->fsg.luns[1].ro = 1;
+		}
 	}
-
-	config->fsg.luns[0].removable = 1;
 
 	common = fsg_common_init(NULL, cdev, &config->fsg);
 	if (IS_ERR(common)) {
@@ -1590,7 +1605,7 @@ static int mass_storage_function_init(struct android_usb_function *f,
 	for (i = 0; i < config->fsg.nluns; i++) {
 		err = sysfs_create_link(&f->dev->kobj,
 					&common->luns[i].dev.kobj,
-					name[i]);
+					common->luns[i].dev.kobj.name);
 		if (err)
 			goto error;
 	}
@@ -1600,7 +1615,7 @@ static int mass_storage_function_init(struct android_usb_function *f,
 	return 0;
 error:
 	for (; i > 0 ; i--)
-		sysfs_remove_link(&f->dev->kobj, name[i-1]);
+		sysfs_remove_link(&f->dev->kobj, common->luns[i-1].dev.kobj.name);
 
 	fsg_common_release(&common->ref);
 	kfree(config);
@@ -2550,6 +2565,32 @@ static void free_android_config(struct android_dev *dev,
 	kfree(conf);
 }
 
+#if defined(CONFIG_MACH_HTC) && defined(CONFIG_ARCH_MSM8X60)
+static ssize_t show_usb_function_switch(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+  return sprintf(buf, "ether:disable\nrndis:disable\n");
+}
+
+static ssize_t store_usb_function_switch(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+        return 0;
+}
+
+static DEVICE_ATTR(usb_function_switch, 0664,
+		show_usb_function_switch, store_usb_function_switch);
+
+static struct attribute *android_htc_usb_attributes[] = {
+	&dev_attr_usb_function_switch.attr,
+	NULL
+};
+
+static const struct attribute_group android_usb_attr_group = {
+	.attrs = android_htc_usb_attributes,
+};
+#endif
+
 static int __devinit android_probe(struct platform_device *pdev)
 {
 	struct android_usb_platform_data *pdata = pdev->dev.platform_data;
@@ -2561,6 +2602,11 @@ static int __devinit android_probe(struct platform_device *pdev)
 		if (IS_ERR(android_class))
 			return PTR_ERR(android_class);
 	}
+
+#if defined(CONFIG_MACH_HTC) && defined(CONFIG_ARCH_MSM8X60)
+	if (sysfs_create_group(&pdev->dev.kobj, &android_usb_attr_group))
+		pr_err("%s: fail to create sysfs\n", __func__);
+#endif
 
 	android_dev = kzalloc(sizeof(*android_dev), GFP_KERNEL);
 	if (!android_dev) {
