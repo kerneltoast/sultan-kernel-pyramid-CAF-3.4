@@ -179,7 +179,7 @@ obj-$(CONFIG_MACH_QSD8X50_FFA) += board-qsd8x50.o
 obj-$(CONFIG_ARCH_MSM8X60) += devices-msm8x60.o clock-local.o clock-8x60.o acpuclock-8x60.o clock-pll.o
 obj-$(CONFIG_ARCH_MSM8X60) += clock-rpm.o
 obj-$(CONFIG_ARCH_MSM8X60) += saw-regulator.o
-obj-$(CONFIG_ARCH_MSM8X60) += footswitch-8x60.o memory_topology.o msm-krait-l2-accessors.o
+obj-$(CONFIG_ARCH_MSM8X60) += footswitch-8x60.o memory_topology.o
 
 ifdef CONFIG_MSM_RPM_REGULATOR
 obj-y += rpm-regulator.o
@@ -212,9 +212,9 @@ ifdef CONFIG_CPU_IDLE
 	obj-$(CONFIG_ARCH_MSM8974) += cpuidle.o
 endif
 
-ifdef CONFIG_MSM_CAMERA_V4L2
-	obj-$(CONFIG_ARCH_MSM8X60) += board-msm8x60-camera.o
-endif
+#ifdef CONFIG_MSM_CAMERA_V4L2
+#	obj-$(CONFIG_ARCH_MSM8X60) += board-msm8x60-camera.o
+#endif
 obj-$(CONFIG_ARCH_FSM9XXX) += devices-fsm9xxx.o
 obj-$(CONFIG_ARCH_FSM9XXX) += clock-fsm9xxx.o clock-local.o acpuclock-fsm9xxx.o
 obj-$(CONFIG_ARCH_FSM9XXX) += dfe-fsm9xxx.o rfic-fsm9xxx.o
@@ -296,6 +296,8 @@ obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-mmc.o board-sapphire-wifi.o
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-rfkill.o msm_vibrator.o
 
 obj-$(CONFIG_MACH_LGE) += lge/
+
+obj-$(CONFIG_MACH_HTC) += htc/
 
 CFLAGS_msm_vibrator.o += -Idrivers/staging/android
 CFLAGS_board-9615.o += -Idrivers/usb/gadget
