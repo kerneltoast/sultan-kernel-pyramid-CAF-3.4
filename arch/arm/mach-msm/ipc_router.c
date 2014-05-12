@@ -2896,7 +2896,11 @@ int msm_ipc_router_bind_control_port(struct msm_ipc_port *port_ptr)
 }
 
 int msm_ipc_router_lookup_server_name(struct msm_ipc_port_name *srv_name,
+#ifdef CONFIG_MACH_HTC
+				struct msm_ipc_port_addr *srv_info,
+#else
 				struct msm_ipc_server_info *srv_info,
+#endif
 				int num_entries_in_array,
 				uint32_t lookup_mask)
 {
@@ -2917,7 +2921,11 @@ int msm_ipc_router_lookup_server_name(struct msm_ipc_port_name *srv_name,
 	down_read(&server_list_lock_lha2);
 	if (!lookup_mask)
 		lookup_mask = 0xFFFFFFFF;
+#ifdef CONFIG_MACH_HTC
+	for (key = 0; key < SRV_HASH_SIZE; key++)
+#else
 	key = (srv_name->service & (SRV_HASH_SIZE - 1));
+#endif
 	list_for_each_entry(server, &server_list[key], list) {
 		if ((server->name.service != srv_name->service) ||
 		    ((server->name.instance & lookup_mask) !=
@@ -2931,8 +2939,10 @@ int msm_ipc_router_lookup_server_name(struct msm_ipc_port_name *srv_name,
 					  server_port->server_addr.node_id;
 				srv_info[i].port_id =
 					  server_port->server_addr.port_id;
+#ifndef CONFIG_MACH_HTC
 				srv_info[i].service = server->name.service;
 				srv_info[i].instance = server->name.instance;
+#endif
 			}
 			i++;
 		}

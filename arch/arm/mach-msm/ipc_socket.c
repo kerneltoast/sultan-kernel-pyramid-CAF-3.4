@@ -231,7 +231,11 @@ static int msm_ipc_router_extract_msg(struct msghdr *m,
 		m->msg_namelen = sizeof(struct sockaddr_msm_ipc);
 		return offset;
 	}
+#ifdef CONFIG_MACH_HTC
+	if (addr && (hdr->src_port_id != IPC_ROUTER_ADDRESS)) {
+#else
 	if (addr && (hdr->type == IPC_ROUTER_CTRL_CMD_DATA)) {
+#endif
 		addr->family = AF_MSM_IPC;
 		addr->address.addrtype = MSM_IPC_ADDR_ID;
 		addr->address.addr.port_addr.node_id = hdr->src_node_id;
@@ -441,7 +445,11 @@ static int msm_ipc_router_ioctl(struct socket *sock,
 	struct sock *sk = sock->sk;
 	struct msm_ipc_port *port_ptr;
 	struct server_lookup_args server_arg;
+#ifdef CONFIG_MACH_HTC
+	struct msm_ipc_port_addr *srv_info = NULL;
+#else
 	struct msm_ipc_server_info *srv_info = NULL;
+#endif
 	unsigned int n;
 	size_t srv_info_sz = 0;
 	int ret;
