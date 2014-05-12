@@ -494,6 +494,7 @@ void mdp4_dtv_vsync_ctrl(struct fb_info *info, int enable);
 void mdp4_dtv_base_swap(int cndx, struct mdp4_overlay_pipe *pipe);
 void mdp4_dtv_pipe_queue(int cndx, struct mdp4_overlay_pipe *pipe);
 int mdp4_dtv_pipe_commit(int cndx, int wait);
+void mdp4_dtv_free_base_pipe(struct msm_fb_data_type *mfd);
 #else
 static inline void mdp4_overlay_dtv_start(void)
 {
@@ -552,6 +553,10 @@ static inline int mdp4_dtv_pipe_commit(int cndx, int wait)
 {
 	return 0;
 }
+static inline void mdp4_dtv_free_base_pipe(struct msm_fb_data_type *mfd)
+{
+	/* empty */
+}
 #endif /* CONFIG_FB_MSM_DTV */
 
 void mdp4_dtv_set_black_screen(void);
@@ -575,8 +580,9 @@ void mdp4_overlay0_done_dsi_cmd(int cndx);
 void mdp4_primary_rdptr(void);
 void mdp4_dsi_cmd_overlay(struct msm_fb_data_type *mfd);
 int mdp4_overlay_commit(struct fb_info *info);
+void mdp4_overlay_commit_finish(struct fb_info *info);
 int mdp4_dsi_video_pipe_commit(int cndx, int wait);
-int mdp4_dsi_cmd_pipe_commit(int cndx, int wait);
+int mdp4_dsi_cmd_pipe_commit(int cndx, int wait, u32 *release_busy);
 int mdp4_lcdc_pipe_commit(int cndx, int wait);
 int mdp4_dsi_cmd_update_cnt(int cndx);
 void mdp4_dsi_rdptr_init(int cndx);
@@ -709,7 +715,6 @@ void mdp4_dsi_video_base_swap(int cndx, struct mdp4_overlay_pipe *pipe);
 void mdp4_dsi_video_free_base_pipe(struct msm_fb_data_type *mfd);
 void mdp4_dsi_cmd_free_base_pipe(struct msm_fb_data_type *mfd);
 void mdp4_lcdc_free_base_pipe(struct msm_fb_data_type *mfd);
-void mdp4_dtv_free_base_pipe(struct msm_fb_data_type *mfd);
 
 #ifdef CONFIG_FB_MSM_MDP40
 static inline void mdp3_dsi_cmd_dma_busy_wait(struct msm_fb_data_type *mfd)
@@ -908,8 +913,19 @@ static inline int mdp4_overlay_borderfill_supported(void)
 int mdp4_overlay_borderfill_supported(void);
 #endif
 
+#ifdef CONFIG_FB_MSM_WRITEBACK_MSM_PANEL
 int mdp4_overlay_writeback_on(struct platform_device *pdev);
 int mdp4_overlay_writeback_off(struct platform_device *pdev);
+#else
+static inline int mdp4_overlay_writeback_on(struct platform_device *pdev)
+{
+  return -ENODEV;
+}
+static inline int mdp4_overlay_writeback_off(struct platform_device *pdev)
+{
+  return -ENODEV;
+}
+#endif
 void mdp4_writeback_overlay(struct msm_fb_data_type *mfd);
 void mdp4_overlay2_done_wfd(struct mdp_dma_data *dma);
 

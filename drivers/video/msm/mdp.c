@@ -44,6 +44,10 @@
 #endif
 #include "mipi_dsi.h"
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#undef CONFIG_HAS_EARLYSUSPEND
+#endif
+
 uint32 mdp4_extn_disp;
 u32 mdp_iommu_max_map_size;
 static struct clk *mdp_clk;
@@ -2386,10 +2390,8 @@ static int mdp_off(struct platform_device *pdev)
 			mfd->panel.type == LCDC_PANEL ||
 			mfd->panel.type == LVDS_PANEL)
 		mdp4_lcdc_off(pdev);
-#ifdef CONFIG_FB_MSM_WRITEBACK_MSM_PANEL
 	else if (mfd->panel.type == WRITEBACK_PANEL)
 		mdp4_overlay_writeback_off(pdev);
-#endif
 
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 	ret = panel_next_off(pdev);
@@ -3467,12 +3469,16 @@ static void mdp_early_suspend(struct early_suspend *h)
 #ifdef CONFIG_FB_MSM_DTV
 	mdp4_dtv_set_black_screen();
 #endif
+#if 0
 	mdp_footswitch_ctrl(FALSE);
+#endif
 }
 
 static void mdp_early_resume(struct early_suspend *h)
 {
+#if 0
 	mdp_footswitch_ctrl(TRUE);
+#endif
 	mutex_lock(&mdp_suspend_mutex);
 	mdp_suspended = FALSE;
 	mutex_unlock(&mdp_suspend_mutex);
