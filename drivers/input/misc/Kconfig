@@ -675,3 +675,29 @@ config BMP18X_I2C
          module will be called bmp18x-i2c.
 
 endif
+
+config SENSORS_AKM8975
+	tristate "AKM8975 compass driver"
+	depends on I2C
+	help
+	  AKM8975 compass driver for HTC.
+
+config INPUT_CAPELLA_CM3629
+	tristate "CM3629 proximity and light sensor"
+	help
+	  Say Y here to enable the CM3629 short distance proximity
+	  sensor with ambient light sensor.
+
+config INPUT_ISL29028
+	tristate "ISL29028 proximity and light sensor"
+	help
+	  Say Y here to enable the ISL29028 Short Distance Proximity
+	  Sensor with Ambient Light Sensor.
+
+config INPUT_ISL29029
+	tristate "ISL29029 proximity and light sensor"
+	help
+	 Say Y here to enable the ISL29029 Short Distance Proximity
+	 Sensor with Ambient Light Sensor.
+
+source "drivers/input/misc/mpu3050_htc/Kconfig"
