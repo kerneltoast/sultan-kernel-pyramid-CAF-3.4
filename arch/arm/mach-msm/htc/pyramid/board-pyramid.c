@@ -42,6 +42,7 @@
 #include <linux/isl29028.h>
 #include <linux/isl29029.h>
 #include <linux/mpu.h>
+#include <linux/msm_tsens.h>
 
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
@@ -1295,9 +1296,11 @@ static struct platform_device *early_devices[] __initdata = {
 #endif
 };
 
-static struct platform_device msm_tsens_device = {
-	.name   = "tsens-tm",
-	.id = -1,
+static struct tsens_platform_data pyr_tsens_pdata  = {
+	.tsens_factor		= 1000,
+	.hw_type		= MSM_8660,
+	.tsens_num_sensor	= 6,
+	.slope 			= 702,
 };
 
 /* HTC_HEADSET_GPIO Driver */
@@ -1786,7 +1789,6 @@ static struct platform_device *pyramid_devices[] __initdata = {
 #ifdef CONFIG_LEDS_PM8058
 	&pm8058_leds,
 #endif
-	&msm_tsens_device,
         &cable_detect_device,
 	&msm8660_rpm_device,
 #ifdef CONFIG_ION_MSM
@@ -2311,6 +2313,8 @@ static void __init pyramid_init(void)
 
 	htc_add_ramconsole_devices();
 	platform_device_register(&msm_gpio_device);
+
+	msm_tsens_early_init(&pyr_tsens_pdata);
 
 	raw_speed_bin = readl(QFPROM_SPEED_BIN_ADDR);
 	speed_bin = raw_speed_bin & 0xF;
