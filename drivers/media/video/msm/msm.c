@@ -2332,7 +2332,7 @@ static long msm_ioctl_server(struct file *file, void *fh,
 	D("%s: cmd %d\n", __func__, _IOC_NR(cmd));
 
 	switch (cmd) {
-	case MSM_CAM_V4L2_IOCTL_GET_CAMERA_INFO:
+	case 0xc00456c1:
 		if (copy_from_user(&temp_cam_info,
 			(void __user *)ioctl_ptr->ioctl_ptr,
 			sizeof(struct msm_camera_info))) {
@@ -2370,7 +2370,7 @@ static long msm_ioctl_server(struct file *file, void *fh,
 		rc = 0;
 		break;
 
-	case MSM_CAM_V4L2_IOCTL_GET_CONFIG_INFO:
+	case 0xc00456c2:
 		if (copy_from_user(&temp_config_info,
 				(void __user *)ioctl_ptr->ioctl_ptr,
 				sizeof(struct msm_cam_config_dev_info))) {
@@ -2397,7 +2397,7 @@ static long msm_ioctl_server(struct file *file, void *fh,
 		}
 		rc = 0;
 		break;
-	case MSM_CAM_V4L2_IOCTL_GET_MCTL_INFO:
+	case 0xc00456c3:
 		if (copy_from_user(&temp_mctl_info,
 				(void __user *)ioctl_ptr->ioctl_ptr,
 				sizeof(struct msm_mctl_node_info))) {
@@ -2427,12 +2427,12 @@ static long msm_ioctl_server(struct file *file, void *fh,
 		rc = 0;
 	break;
 
-	case MSM_CAM_V4L2_IOCTL_CTRL_CMD_DONE:
+	case 0xc00456c4:
 		D("%s: MSM_CAM_IOCTL_CTRL_CMD_DONE\n", __func__);
 		rc = msm_ctrl_cmd_done(arg);
 		break;
 
-	case MSM_CAM_V4L2_IOCTL_GET_EVENT_PAYLOAD: {
+	case 0xc00456c5: {
 		struct msm_queue_cmd *event_cmd;
 		struct msm_isp_event_ctrl u_isp_event;
 		struct msm_isp_event_ctrl *k_isp_event;
