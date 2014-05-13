@@ -116,11 +116,12 @@ struct thermal_zone_device {
 	struct mutex lock;	/* protect cooling devices list */
 	struct list_head node;
 	struct delayed_work poll_queue;
+	int thermal_trip_critical_retry_count;
 };
 /* Adding event notification support elements */
 #define THERMAL_GENL_FAMILY_NAME                "thermal_event"
 #define THERMAL_GENL_VERSION                    0x01
-#define THERMAL_GENL_MCAST_GROUP_NAME           "thermal_mc_group"
+#define THERMAL_GENL_MCAST_GROUP_NAME           "thermal_mc_grp"
 
 enum events {
 	THERMAL_AUX0,
@@ -164,9 +165,9 @@ struct thermal_cooling_device *thermal_cooling_device_register(char *, void *,
 void thermal_cooling_device_unregister(struct thermal_cooling_device *);
 
 #ifdef CONFIG_NET
-extern int thermal_generate_netlink_event(u32 orig, enum events event);
+extern int generate_netlink_event(u32 orig, enum events event);
 #else
-static inline int thermal_generate_netlink_event(u32 orig, enum events event)
+static inline int generate_netlink_event(u32 orig, enum events event)
 {
 	return 0;
 }

@@ -46,4 +46,16 @@ struct pm8901_platform_data {
 	int					num_regulators;
 };
 
+struct pm8901_chip {
+	struct pm8901_platform_data	pdata;
+	struct device			*dev;
+	struct pm_irq_chip		*irq_chip;
+	struct mfd_cell			*mfd_regulators;
+	u8				revision;
+};
+
+
+extern int pm8901_readb(const struct device *dev, u16 addr, u8 *val);
+extern int pm8901_writeb(const struct device *dev, u16 addr, u8 val);
+
 #endif /* __PMIC8901_H__ */
