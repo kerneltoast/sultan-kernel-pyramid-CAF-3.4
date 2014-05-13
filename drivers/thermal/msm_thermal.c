@@ -167,11 +167,11 @@ static void check_temp(struct work_struct *work)
 				pr_warn("msm_thermal: Low Thermal Throttling Ended! temp: %lu\n", temp);
 			}
 		//mid trip point
-		} else if ((temp >= msm_thermal_tuners_ins.allowed_low_high) &&
-			   (temp < msm_thermal_tuners_ins.allowed_mid_low) &&
+		} else if ((temp >= msm_thermal_tuners_ins.allowed_mid_high) &&
+			   (temp < msm_thermal_tuners_ins.allowed_max_high) &&
 			   (cpu_policy->max > msm_thermal_tuners_ins.allowed_mid_freq)) {
 			update_policy = 1;
-			max_freq = msm_thermal_tuners_ins.allowed_low_freq;
+			max_freq = msm_thermal_tuners_ins.allowed_mid_freq;
 			thermal_throttled = 2;
 			pr_warn("msm_thermal: Thermal Throttled (mid)! temp: %lu\n", temp);
 		//mid clr point
