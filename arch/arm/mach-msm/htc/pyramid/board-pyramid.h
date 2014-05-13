@@ -26,60 +26,36 @@
 #define MSM_RAM_CONSOLE_BASE	MSM_HTC_RAM_CONSOLE_PHYS
 #define MSM_RAM_CONSOLE_SIZE	MSM_HTC_RAM_CONSOLE_SIZE
 
-/*** Memory map ***/
+/* Memory map */
 #define MSM_SMI_BASE         0x38000000
 #define MSM_SMI_SIZE         0x4000000
 
-#ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
-#define MSM_FB_PRIM_BUF_SIZE (960 * 544 * 4 * 3) /* 4 bpp x 3 pages */
-#else
-#define MSM_FB_PRIM_BUF_SIZE (960 * 544 * 4 * 2) /* 4 bpp x 2 pages */
-#endif
-
-
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
 #define MSM_FB_EXT_BUF_SIZE (1920 * 1088 * 2 * 1) /* 2 bpp x 1 page */
-#elif defined(CONFIG_FB_MSM_TVOUT)
-#define MSM_FB_EXT_BUF_SIZE (720 * 576 * 2 * 2) /* 2 bpp x 2 pages */
 #else
 #define MSM_FB_EXT_BUF_SIZE 0
 #endif
 
 /* Note: must be multiple of 4096 */
-#define MSM_FB_SIZE roundup(MSM_FB_PRIM_BUF_SIZE + MSM_FB_EXT_BUF_SIZE, 4096)
-
-#ifdef CONFIG_FB_MSM_OVERLAY0_WRITEBACK
-#define MSM_FB_OVERLAY0_WRITEBACK_SIZE roundup((960 * 544 * 3 * 2), 4096)
-#else
-#define MSM_FB_OVERLAY0_WRITEBACK_SIZE (0)
-#endif  /* CONFIG_FB_MSM_OVERLAY0_WRITEBACK */
-
-#ifdef CONFIG_FB_MSM_OVERLAY1_WRITEBACK
-#define MSM_FB_OVERLAY1_WRITEBACK_SIZE roundup((1920 * 1088 * 3 * 2), 4096)
-#else
-#define MSM_FB_OVERLAY1_WRITEBACK_SIZE (0)
-#endif  /* CONFIG_FB_MSM_OVERLAY1_WRITEBACK */
-
-#define PHY_BASE_ADDR1       0x48000000
-#define SIZE_ADDR1           0x28000000
+#define MSM_FB_SIZE roundup((960 * 544 * 4 * 3) + MSM_FB_EXT_BUF_SIZE, 4096)
 
 #define MSM_ION_MM_FW_SIZE   0x200000
 #define MSM_ION_MM_SIZE      0x3D00000
 #define MSM_ION_MFC_SIZE     0x100000
-#define MSM_ION_SF_SIZE      0x3000000
-#define MSM_ION_WB_SIZE      0x600000
-#define MSM_ION_CAMERA_SIZE  0x2400000
+#define MSM_ION_SF_SIZE      0x2A00000
+#define MSM_ION_WB_SIZE      0x500000
 #define MSM_ION_AUDIO_SIZE   0x4CF000
 
-#define MSM_ION_HEAP_NUM     8
+#define MSM_ION_HEAP_NUM     7
 
 #define MSM_ION_MM_FW_BASE   0x38000000
 #define MSM_ION_MM_BASE      0x38200000
 #define MSM_ION_MFC_BASE     0x3BF00000
-#define MSM_ION_CAMERA_BASE  0x40400000
-#define MSM_ION_WB_BASE      0x42800000
-#define MSM_ION_SF_BASE      0x49800000
-/*** END Memory map ***/
+#define MSM_ION_SF_BASE      0x40400000
+#define MSM_ION_WB_BASE      0x45C00000
+
+#define PHY_BASE_ADDR1       0x48000000
+#define SIZE_ADDR1           0x28000000
 
 /* GPIO definition */
 
