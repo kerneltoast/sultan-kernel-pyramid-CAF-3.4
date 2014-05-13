@@ -130,6 +130,10 @@
 #include <mach/ion.h>
 #include <mach/msm_rtb.h>
 
+#ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_2_PHASE
+int set_two_phase_freq(int cpufreq);
+#endif
+
 extern int ps_type;
 
 static unsigned int engineerid, mem_size_mb;
@@ -2361,6 +2365,10 @@ static void __init pyramid_init(void)
 	msm8x60_init_buses();
 
 	platform_add_devices(early_devices, ARRAY_SIZE(early_devices));
+
+#ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_2_PHASE
+	set_two_phase_freq(1080000);
+#endif
 
 	msm8x60_init_uart12dm();
 	pyramid_init_mmc();
