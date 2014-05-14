@@ -99,7 +99,6 @@ struct usb_hcd {
 	 */
 	unsigned long		flags;
 #define HCD_FLAG_HW_ACCESSIBLE		0	/* at full power */
-#define HCD_FLAG_SAW_IRQ		1
 #define HCD_FLAG_POLL_RH		2	/* poll for rh status? */
 #define HCD_FLAG_POLL_PENDING		3	/* status has changed? */
 #define HCD_FLAG_WAKEUP_PENDING		4	/* root hub is resuming? */
@@ -127,6 +126,8 @@ struct usb_hcd {
 	unsigned		wireless:1;	/* Wireless USB HCD */
 	unsigned		authorized_default:1;
 	unsigned		has_tt:1;	/* Integrated TT in root hub */
+	unsigned		broken_pci_sleep:1;	/* Don't put the
+			controller in PCI-D3 for system sleep */
 
 	unsigned int		irq;		/* irq allocated */
 	void __iomem		*regs;		/* device memory/io */

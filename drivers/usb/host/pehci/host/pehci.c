@@ -30,6 +30,7 @@
 #include <linux/ioport.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/smp_lock.h>
 #include <linux/errno.h>
 #include <linux/init.h>
 #include <linux/timer.h>
@@ -182,7 +183,7 @@ struct wake_lock pehci_wake_lock;
  -----------------------------------------------------*/
 
 /* used	when updating hcd data */
-DEFINE_SPINLOCK(hcd_data_lock);
+static spinlock_t hcd_data_lock	= SPIN_LOCK_UNLOCKED;
 
 static const char hcd_name[] = "ST-Ericsson ISP1763";
 static td_ptd_map_buff_t td_ptd_map_buff[TD_PTD_TOTAL_BUFF_TYPES];	/* td-ptd map buffer for all 1362 buffers */
@@ -3896,8 +3897,8 @@ pehci_hub_descriptor(phci_hcd *	hcd, struct usb_hub_descriptor *desc)
 	desc->bDescLength = 7 +	2 * temp;
 	/* two bitmaps:	 ports removable, and usb 1.0 legacy PortPwrCtrlMask */
 
-	memset(&desc->u.hs.DeviceRemovable[0], 0, temp);
-	memset(&desc->u.hs.PortPwrCtrlMask[temp], 0xff, temp);
+	memset(&desc->DeviceRemovable[0], 0, temp);
+	memset(&desc->PortPwrCtrlMask[temp], 0xff, temp);
 
 	temp = 0x0008;		/* per-port overcurrent	reporting */
 	temp |=	0x0001;		/* per-port power control */
