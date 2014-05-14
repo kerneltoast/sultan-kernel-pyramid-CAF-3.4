@@ -165,6 +165,7 @@ extern struct pm8901_vreg_pdata pm8901_regulator_pdata[];
 extern int pm8901_regulator_pdata_len;
 extern struct platform_device msm_adc_device;
 
+int mipi_dsi_panel_power(int on);
 void __init pyramid_init_mmc(void);
 int __init pyramid_init_wifi_mmc(void);
 void __init pyramid_audio_init(void);

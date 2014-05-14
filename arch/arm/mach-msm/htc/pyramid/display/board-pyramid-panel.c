@@ -1019,12 +1019,25 @@ static struct platform_device hdmi_msm_device = {
 
 extern int mipi_lcd_on;
 static bool dsi_power_on;
-static int mipi_dsi_panel_power(int on)
+
+static int panel_uv = 400;
+module_param(panel_uv, int, 0664);
+
+void mipi_dsi_panel_uv(int panel_undervolt)
+{
+	panel_uv = panel_undervolt;
+}
+
+int mipi_dsi_panel_power(int on)
 {
         static struct regulator *l1_3v, *lvs1_1v8, *l4_1v8;
 	static bool bPanelPowerOn = false;
 	int ret;
 	int rc;
+	int panel_voltage;
+	static int panel_voltage_after = 2700000;
+
+	panel_voltage = (3100000 - (panel_uv * 1000));
 
         printk(KERN_ERR  "[DISP] %s +++ %d %d\n", __func__, mipi_lcd_on, dsi_power_on == true);
 	/* To avoid system crash in shutdown for non-panel case */
@@ -1049,7 +1062,7 @@ static int mipi_dsi_panel_power(int on)
                   return -ENODEV;
                 }
 
-		ret = regulator_set_voltage(l1_3v, 3100000, 3100000);
+		ret = regulator_set_voltage(l1_3v, 2700000, 2700000);
 		if (ret) {
 			pr_err("[DISP] %s: error setting l1_3v voltage\n", __func__);
                         return -EINVAL;
@@ -1071,6 +1084,35 @@ static int mipi_dsi_panel_power(int on)
 			return -EINVAL;
 		}
 		dsi_power_on = true;
+	}
+
+	if (dsi_power_on && (panel_voltage != panel_voltage_after)) {
+		// Do nothing if panel voltage has already been transformed
+		if (panel_voltage_after != panel_voltage) {
+			// Check if requested panel voltage is in bounds
+			if ((panel_voltage < 2400000) || (panel_voltage > 3100000)) {
+				pr_err("%s: %dmV is out of range\n", __func__, panel_uv);
+				pr_err("%s: falling back to %dmV\n", __func__, (panel_voltage_after/1000));
+				panel_voltage = panel_voltage_after;
+			}
+
+			// Check if requested panel voltage is a multiple
+			// of 25mV.
+			if ((panel_voltage % 25000) != 0) {
+				pr_err("%s: %dmV undervolt is not a multiple of 25\n", __func__, panel_uv);
+				pr_err("%s: falling back to %dmV\n", __func__, (panel_voltage_after/1000));
+				panel_voltage = panel_voltage_after;
+			}
+
+			rc = regulator_set_voltage(l1_3v, panel_voltage, panel_voltage);
+			if (rc)
+				pr_err("%s: error undervolting panel\n", __func__);
+			else
+				pr_info("%s: panel voltage is now %dmV\n", __func__, (panel_voltage/1000));
+
+			panel_voltage_after = panel_voltage;
+			mipi_dsi_panel_uv((3100000 - panel_voltage_after)/1000);
+		}
 	}
 
 	if (on) {
@@ -1134,7 +1176,6 @@ static int mipi_dsi_panel_power(int on)
 
 static struct mipi_dsi_platform_data mipi_dsi_pdata = {
   	.vsync_gpio		= GPIO_LCD_TE,
-	.dsi_power_save = mipi_dsi_panel_power,
 };
 
 static struct platform_device mipi_dsi_pyramid_panel_device = {

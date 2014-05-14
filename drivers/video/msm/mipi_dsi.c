@@ -35,6 +35,8 @@
 #include "mdp.h"
 #include "mdp4.h"
 
+#include <../../../arch/arm/mach-msm/htc/pyramid/board-pyramid.h>
+
 u32 dsi_irq;
 u32 esc_byte_ratio;
 
@@ -133,6 +135,8 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	if (mipi_dsi_pdata && mipi_dsi_pdata->dsi_power_save)
 		mipi_dsi_pdata->dsi_power_save(0);
 
+	mipi_dsi_panel_power(0);
+
 	if (mdp_rev >= MDP_REV_41)
 		mutex_unlock(&mfd->dma->ov_mutex);
 	else
@@ -166,6 +170,8 @@ static int mipi_dsi_on(struct platform_device *pdev)
 
 	if (mipi_dsi_pdata && mipi_dsi_pdata->dsi_power_save)
 		mipi_dsi_pdata->dsi_power_save(1);
+
+	mipi_dsi_panel_power(1);
 
 	cont_splash_clk_ctrl(0);
 	mipi_dsi_prepare_ahb_clocks();
