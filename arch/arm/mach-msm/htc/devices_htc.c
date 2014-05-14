@@ -20,6 +20,7 @@
 #include <mach/msm_iomap.h>
 #include <linux/mtd/nand.h>
 #include <linux/module.h>
+#include "pyramid/board-pyramid.h"
 
 #define MFG_GPIO_TABLE_MAX_SIZE        0x400
 static unsigned char mfg_gpio_table[MFG_GPIO_TABLE_MAX_SIZE];
@@ -775,9 +776,6 @@ char *board_cid(void)
 	return android_cid;
 }
 EXPORT_SYMBOL(board_cid);
-
-#define MSM_RAM_CONSOLE_BASE	MSM_HTC_RAM_CONSOLE_PHYS
-#define MSM_RAM_CONSOLE_SIZE	MSM_HTC_RAM_CONSOLE_SIZE
 
 static struct resource ram_console_resources[] = {
 	{
