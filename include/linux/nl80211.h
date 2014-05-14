@@ -368,8 +368,8 @@
  *	requests to connect to a specified network but without separating
  *	auth and assoc steps. For this, you need to specify the SSID in a
  *	%NL80211_ATTR_SSID attribute, and can optionally specify the association
- *	IEs in %NL80211_ATTR_IE, %NL80211_ATTR_AUTH_TYPE, %NL80211_ATTR_MAC,
- *	%NL80211_ATTR_WIPHY_FREQ, %NL80211_ATTR_CONTROL_PORT,
+ *	IEs in %NL80211_ATTR_IE, %NL80211_ATTR_AUTH_TYPE, %NL80211_ATTR_USE_MFP,
+ *	%NL80211_ATTR_MAC, %NL80211_ATTR_WIPHY_FREQ, %NL80211_ATTR_CONTROL_PORT,
  *	%NL80211_ATTR_CONTROL_PORT_ETHERTYPE and
  *	%NL80211_ATTR_CONTROL_PORT_NO_ENCRYPT.
  *	Background scan period can optionally be
@@ -517,12 +517,12 @@
  *	of PMKSA caching dandidates.
  *
  * @NL80211_CMD_TDLS_OPER: Perform a high-level TDLS command (e.g. link setup).
- *     In addition, this can be used as an event to request userspace to take
- *     actions on TDLS links (set up a new link or tear down an existing one).
- *     In such events, %NL80211_ATTR_TDLS_OPERATION indicates the requested
- *     operation, %NL80211_ATTR_MAC contains the peer MAC address, and
- *     %NL80211_ATTR_REASON_CODE the reason code to be used (only with
- *     %NL80211_TDLS_TEARDOWN).
+ *	In addition, this can be used as an event to request userspace to take
+ *	actions on TDLS links (set up a new link or tear down an existing one).
+ *	In such events, %NL80211_ATTR_TDLS_OPERATION indicates the requested
+ *	operation, %NL80211_ATTR_MAC contains the peer MAC address, and
+ *	%NL80211_ATTR_REASON_CODE the reason code to be used (only with
+ *	%NL80211_TDLS_TEARDOWN).
  * @NL80211_CMD_TDLS_MGMT: Send a TDLS management frame.
  *
  * @NL80211_CMD_UNEXPECTED_FRAME: Used by an application controlling an AP
@@ -607,35 +607,6 @@
  *	to the supplicant. This will carry the target AP's MAC address along
  *	with the relevant Information Elements. This event is used to report
  *	received FT IEs (MDIE, FTIE, RSN IE, TIE, RICIE).
- *
- * @NL80211_CMD_CRIT_PROTOCOL_START: Indicates user-space will start running
- *	a critical protocol that needs more reliability in the connection to
- *	complete.
- *
- * @NL80211_CMD_CRIT_PROTOCOL_STOP: Indicates the connection reliability can
- *	return back to normal.
- *
- * @NL80211_CMD_GET_COALESCE: Get currently supported coalesce rules.
- * @NL80211_CMD_SET_COALESCE: Configure coalesce rules or clear existing rules.
- *
- * @NL80211_CMD_CHANNEL_SWITCH: Perform a channel switch by announcing the
- *	the new channel information (Channel Switch Announcement - CSA)
- *	in the beacon for some time (as defined in the
- *	%NL80211_ATTR_CH_SWITCH_COUNT parameter) and then change to the
- *	new channel. Userspace provides the new channel information (using
- *	%NL80211_ATTR_WIPHY_FREQ and the attributes determining channel
- *	width). %NL80211_ATTR_CH_SWITCH_BLOCK_TX may be supplied to inform
- *	other station that transmission must be blocked until the channel
- *	switch is complete.
- *
- * @NL80211_CMD_VENDOR: Vendor-specified command/event. The command is specified
- *	by the %NL80211_ATTR_VENDOR_ID attribute and a sub-command in
- *	%NL80211_ATTR_VENDOR_SUBCMD. Parameter(s) can be transported in
- *	%NL80211_ATTR_VENDOR_DATA.
- *	For feature advertisement, the %NL80211_ATTR_VENDOR_DATA attribute is
- *	used in the wiphy data as a nested attribute containing descriptions
- *	(&struct nl80211_vendor_cmd_info) of the supported vendor commands.
- *	This may also be sent as an event with the same attributes.
  *
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
@@ -796,16 +767,6 @@ enum nl80211_commands {
 
 	NL80211_CMD_UPDATE_FT_IES,
 	NL80211_CMD_FT_EVENT,
-
-	NL80211_CMD_CRIT_PROTOCOL_START,
-	NL80211_CMD_CRIT_PROTOCOL_STOP,
-
-	NL80211_CMD_GET_COALESCE,
-	NL80211_CMD_SET_COALESCE,
-
-	NL80211_CMD_CHANNEL_SWITCH,
-
-	NL80211_CMD_VENDOR,
 
 	/* add new commands above here */
 
@@ -1007,7 +968,7 @@ enum nl80211_commands {
  * @NL80211_ATTR_USE_MFP: Whether management frame protection (IEEE 802.11w) is
  *	used for the association (&enum nl80211_mfp, represented as a u32);
  *	this attribute can be used
- *	with %NL80211_CMD_ASSOCIATE request
+ *	with %NL80211_CMD_ASSOCIATE and %NL80211_CMD_CONNECT requests
  *
  * @NL80211_ATTR_STA_FLAGS2: Attribute containing a
  *	&struct nl80211_sta_flag_update.
@@ -1247,55 +1208,6 @@ enum nl80211_commands {
  *	%NL80211_CMD_SET_BEACON to provide extra IEs (e.g., WPS/P2P IE) into
  *	(Re)Association Response frames when the driver (or firmware) replies to
  *	(Re)Association Request frames.
- * @NL80211_ATTR_STA_WME: Nested attribute containing the wme configuration
- *      of the station, see &enum nl80211_sta_wme_attr.
- * @NL80211_ATTR_SUPPORT_AP_UAPSD: the device supports uapsd when working
- *      as AP.
- *
- * @NL80211_ATTR_ROAM_SUPPORT: Indicates whether the firmware is capable of
- *      roaming to another AP in the same ESS if the signal lever is low.
- *
- * @NL80211_ATTR_PMKSA_CANDIDATE: Nested attribute containing the PMKSA caching
- *      candidate information, see &enum nl80211_pmksa_candidate_attr.
- *
- * @NL80211_ATTR_TX_NO_CCK_RATE: Indicates whether to use CCK rate or not
- *      for management frames transmission. In order to avoid p2p probe/action
- *      frames are being transmitted at CCK rate in 2GHz band, the user space
- *      applications use this attribute.
- *      This attribute is used with %NL80211_CMD_TRIGGER_SCAN and
- *      %NL80211_CMD_FRAME commands.
- *
- * @NL80211_ATTR_TDLS_ACTION: Low level TDLS action code (e.g. link setup
- *      request, link setup confirm, link teardown, etc.). Values are
- *      described in the TDLS (802.11z) specification.
- * @NL80211_ATTR_TDLS_DIALOG_TOKEN: Non-zero token for uniquely identifying a
- *      TDLS conversation between two devices.
- * @NL80211_ATTR_TDLS_OPERATION: High level TDLS operation; see
- *      &enum nl80211_tdls_operation, represented as a u8.
- * @NL80211_ATTR_TDLS_SUPPORT: A flag indicating the device can operate
- *      as a TDLS peer sta.
- * @NL80211_ATTR_TDLS_EXTERNAL_SETUP: The TDLS discovery/setup and teardown
- *      procedures should be performed by sending TDLS packets via
- *      %NL80211_CMD_TDLS_MGMT. Otherwise %NL80211_CMD_TDLS_OPER should be
- *      used for asking the driver to perform a TDLS operation.
- *
- * @NL80211_ATTR_DEVICE_AP_SME: This u32 attribute may be listed for devices
- *      that have AP support to indicate that they have the AP SME integrated
- *      with support for the features listed in this attribute, see
- *      &enum nl80211_ap_sme_features.
- *
- * @NL80211_ATTR_DONT_WAIT_FOR_ACK: Used with %NL80211_CMD_FRAME, this tells
- *      the driver to not wait for an acknowledgement. Note that due to this,
- *      it will also not give a status callback nor return a cookie. This is
- *      mostly useful for probe responses to save airtime.
- *
- * @NL80211_ATTR_FEATURE_FLAGS: This u32 attribute contains flags from
- *      &enum nl80211_feature_flags and is advertised in wiphy information.
- * @NL80211_ATTR_PROBE_RESP_OFFLOAD: Indicates that the HW responds to probe
- *
- *      requests while operating in AP-mode.
- *      This attribute holds a bitmap of the supported protocols for
- *      offloading (see &enum nl80211_probe_resp_offload_support_attr).
  *
  * @NL80211_ATTR_STA_WME: Nested attribute containing the wme configuration
  *	of the station, see &enum nl80211_sta_wme_attr.
@@ -1447,53 +1359,6 @@ enum nl80211_commands {
  *
  * @NL80211_ATTR_IE_RIC: Resource Information Container Information
  *	Element
- *
- * @NL80211_ATTR_CRIT_PROT_ID: critical protocol identifier requiring increased
- *	reliability, see &enum nl80211_crit_proto_id (u16).
- * @NL80211_ATTR_MAX_CRIT_PROT_DURATION: duration in milliseconds in which
- *      the connection should have increased reliability (u16).
- *
- * @NL80211_ATTR_PEER_AID: Association ID for the peer TDLS station (u16).
- *	This is similar to @NL80211_ATTR_STA_AID but with a difference of being
- *	allowed to be used with the first @NL80211_CMD_SET_STATION command to
- *	update a TDLS peer STA entry.
- *
- * @NL80211_ATTR_COALESCE_RULE: Coalesce rule information.
- *
- * @NL80211_ATTR_CH_SWITCH_COUNT: u32 attribute specifying the number of TBTT's
- *	until the channel switch event.
- * @NL80211_ATTR_CH_SWITCH_BLOCK_TX: flag attribute specifying that transmission
- *	must be blocked on the current channel (before the channel switch
- *	operation).
- * @NL80211_ATTR_CSA_IES: Nested set of attributes containing the IE information
- *	for the time while performing a channel switch.
- * @NL80211_ATTR_CSA_C_OFF_BEACON: Offset of the channel switch counter
- *	field in the beacons tail (%NL80211_ATTR_BEACON_TAIL).
- * @NL80211_ATTR_CSA_C_OFF_PRESP: Offset of the channel switch counter
- *	field in the probe response (%NL80211_ATTR_PROBE_RESP).
- *
- * @NL80211_ATTR_RXMGMT_FLAGS: flags for nl80211_send_mgmt(), u32.
- *	As specified in the &enum nl80211_rxmgmt_flags.
- *
- * @NL80211_ATTR_STA_SUPPORTED_CHANNELS: array of supported channels.
- *
- * @NL80211_ATTR_STA_SUPPORTED_OPER_CLASSES: array of supported
- *      supported operating classes.
- *
- * @NL80211_ATTR_HANDLE_DFS: A flag indicating whether user space
- *	controls DFS operation in IBSS mode. If the flag is included in
- *	%NL80211_CMD_JOIN_IBSS request, the driver will allow use of DFS
- *	channels and reports radar events to userspace. Userspace is required
- *	to react to radar events, e.g. initiate a channel switch or leave the
- *	IBSS network.
- *
- * @NL80211_ATTR_VENDOR_ID: The vendor ID, either a 24-bit OUI or, if
- *	%NL80211_VENDOR_ID_IS_LINUX is set, a special Linux ID (not used yet)
- * @NL80211_ATTR_VENDOR_SUBCMD: vendor sub-command
- * @NL80211_ATTR_VENDOR_DATA: data for the vendor command, if any; this
- *	attribute is also used for vendor command feature advertisement
- * @NL80211_ATTR_VENDOR_EVENTS: used for event list advertising in the wiphy
- *	info, containing a nested array of possible events
  *
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -1789,38 +1654,6 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_MDID,
 	NL80211_ATTR_IE_RIC,
-
-	NL80211_ATTR_CRIT_PROT_ID,
-	NL80211_ATTR_MAX_CRIT_PROT_DURATION,
-
-	NL80211_ATTR_PEER_AID,
-
-	NL80211_ATTR_COALESCE_RULE,
-
-	NL80211_ATTR_CH_SWITCH_COUNT,
-	NL80211_ATTR_CH_SWITCH_BLOCK_TX,
-	NL80211_ATTR_CSA_IES,
-	NL80211_ATTR_CSA_C_OFF_BEACON,
-	NL80211_ATTR_CSA_C_OFF_PRESP,
-
-	NL80211_ATTR_RXMGMT_FLAGS,
-
-	NL80211_ATTR_STA_SUPPORTED_CHANNELS,
-
-	NL80211_ATTR_STA_SUPPORTED_OPER_CLASSES,
-
-	NL80211_ATTR_HANDLE_DFS,
-
-	NL80211_ATTR_SUPPORT_5_MHZ,
-	NL80211_ATTR_SUPPORT_10_MHZ,
-
-	NL80211_ATTR_OPMODE_NOTIF,
-
-	NL80211_ATTR_VENDOR_ID,
-	NL80211_ATTR_VENDOR_SUBCMD,
-	NL80211_ATTR_VENDOR_DATA,
-
-	NL80211_ATTR_VENDOR_EVENTS,
 
 	/* add attributes here, update the policy in nl80211.c */
 
@@ -3264,45 +3097,4 @@ enum nl80211_acl_policy {
 	NL80211_ACL_POLICY_ACCEPT_UNLESS_LISTED,
 	NL80211_ACL_POLICY_DENY_UNLESS_LISTED,
 };
-/**
- * enum nl80211_crit_proto_id - nl80211 critical protocol identifiers
- *
- * @NL80211_CRIT_PROTO_UNSPEC: protocol unspecified.
- * @NL80211_CRIT_PROTO_DHCP: BOOTP or DHCPv6 protocol.
- * @NL80211_CRIT_PROTO_EAPOL: EAPOL protocol.
- * @NL80211_CRIT_PROTO_APIPA: APIPA protocol.
- * @NUM_NL80211_CRIT_PROTO: must be kept last.
- */
-enum nl80211_crit_proto_id {
-	NL80211_CRIT_PROTO_UNSPEC,
-	NL80211_CRIT_PROTO_DHCP,
-	NL80211_CRIT_PROTO_EAPOL,
-	NL80211_CRIT_PROTO_APIPA,
-	/* add other protocols before this one */
-	NUM_NL80211_CRIT_PROTO
-};
-
-/* maximum duration for critical protocol measures */
-#define NL80211_CRIT_PROTO_MAX_DURATION		5000 /* msec */
-
-/*
- * If this flag is unset, the lower 24 bits are an OUI, if set
- * a Linux nl80211 vendor ID is used (no such IDs are allocated
- * yet, so that's not valid so far)
- */
-#define NL80211_VENDOR_ID_IS_LINUX	0x80000000
-
-/**
- * struct nl80211_vendor_cmd_info - vendor command data
- * @vendor_id: If the %NL80211_VENDOR_ID_IS_LINUX flag is clear, then the
- *	value is a 24-bit OUI; if it is set then a separately allocated ID
- *	may be used, but no such IDs are allocated yet. New IDs should be
- *	added to this file when needed.
- * @subcmd: sub-command ID for the command
- */
-struct nl80211_vendor_cmd_info {
-	__u32 vendor_id;
-	__u32 subcmd;
-};
-
 #endif /* __LINUX_NL80211_H */
