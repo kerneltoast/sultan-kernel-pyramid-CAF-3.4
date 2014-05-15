@@ -627,6 +627,10 @@ struct msm_hdmi_platform_data {
 	bool (*check_hdcp_hw_support)(void);
 	bool (*source)(void);
 	bool is_mhl_enabled;
+#if defined(CONFIG_MACH_HTC) && defined(CONFIG_FB_MSM_HDMI_MHL)
+	mhl_driving_params *driving_params;
+	int driving_params_count;
+#endif
 };
 
 struct msm_mhl_platform_data {
