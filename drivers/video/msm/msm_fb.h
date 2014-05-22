@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -195,6 +195,7 @@ struct msm_fb_data_type {
 	u32 mdp_rev;
 	u32 writeback_state;
 	bool writeback_active_cnt;
+	bool writeback_initialized;
 	int cont_splash_done;
 	void *cpu_pm_hdl;
 	u32 acq_fen_cnt;
@@ -217,16 +218,6 @@ struct msm_fb_data_type {
 	uint32 sec_mapped;
 	uint32 sec_active;
 	uint32 max_map_size;
-#ifdef CONFIG_CABC_DIMMING_SWITCH
-	struct workqueue_struct *dimming_wq;
-	struct work_struct dimming_work;
-	struct timer_list dimming_update_timer;
-#endif
-#ifdef CONFIG_SRE_CONTROL
-	struct workqueue_struct *sre_wq;
-	struct work_struct sre_work;
-	struct timer_list sre_update_timer;
-#endif
 };
 struct msm_fb_backup_type {
 	struct fb_info info;
