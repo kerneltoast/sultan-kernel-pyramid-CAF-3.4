@@ -39,7 +39,7 @@
 	.flags	= IORESOURCE_IRQ, \
 }
 
-int pm8901_readb(const struct device *dev, u16 addr, u8 *val)
+extern int pm8901_readb(const struct device *dev, u16 addr, u8 *val)
 {
 	const struct pm8xxx_drvdata *pm8901_drvdata = dev_get_drvdata(dev);
 	const struct pm8901_chip *pmic = pm8901_drvdata->pm_chip_data;
@@ -47,7 +47,7 @@ int pm8901_readb(const struct device *dev, u16 addr, u8 *val)
 	return msm_ssbi_read(pmic->dev->parent, addr, val, 1);
 }
 
-int pm8901_writeb(const struct device *dev, u16 addr, u8 val)
+extern int pm8901_writeb(const struct device *dev, u16 addr, u8 val)
 {
 	const struct pm8xxx_drvdata *pm8901_drvdata = dev_get_drvdata(dev);
 	const struct pm8901_chip *pmic = pm8901_drvdata->pm_chip_data;
