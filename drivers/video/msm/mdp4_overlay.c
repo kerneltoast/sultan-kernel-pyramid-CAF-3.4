@@ -601,7 +601,7 @@ void mdp4_overlay_dmap_cfg(struct msm_fb_data_type *mfd, int lcdc)
 
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 
-#ifndef CONFIG_FB_MSM_LCDC_CHIMEI_WXGA_PANEL
+#if !defined(CONFIG_FB_MSM_LCDC_CHIMEI_WXGA_PANEL) && !defined(CONFIG_MACH_TENDERLOIN)
 	if (lcdc)
 		dma2_cfg_reg |= DMA_PACK_ALIGN_MSB;
 #endif
@@ -834,6 +834,11 @@ void mdp4_overlay_rgb_setup(struct mdp4_overlay_pipe *pipe)
 
 #ifdef MDP4_IGC_LUT_ENABLE
 	pipe->op_mode |= MDP4_OP_IGC_LUT_EN;
+#endif
+
+#ifdef CONFIG_MACH_TENDERLOIN
+	pipe->op_mode |= MDP4_OP_FLIP_LR;
+	pipe->op_mode |= MDP4_OP_FLIP_UD;
 #endif
 
 	mdp4_scale_setup(pipe);
@@ -2724,6 +2729,11 @@ static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 
 	pipe->op_mode = 0;
 
+#ifdef CONFIG_MACH_TENDERLOIN
+	pipe->op_mode |= MDP4_OP_FLIP_LR;
+	pipe->op_mode |= MDP4_OP_FLIP_UD;
+#endif
+
 	if (req->flags & MDP_FLIP_LR)
 		pipe->op_mode |= MDP4_OP_FLIP_LR;
 
@@ -2746,11 +2756,6 @@ static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 
 	pipe->transp = req->transp_mask;
 
-	if ((pipe->flags & MDP_SECURE_OVERLAY_SESSION) &&
-		(!(req->flags & MDP_SECURE_OVERLAY_SESSION))) {
-		pr_err("%s Switch secure %d", __func__, pipe->pipe_ndx);
-		mfd->sec_active = FALSE;
-	}
 	pipe->flags = req->flags;
 
 	*ppipe = pipe;

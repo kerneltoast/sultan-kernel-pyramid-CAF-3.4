@@ -4,7 +4,7 @@
  * Core MSM framebuffer driver.
  *
  * Copyright (C) 2007 Google Incorporated
- * Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2013, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -62,6 +62,15 @@
 #undef CONFIG_HAS_EARLYSUSPEND
 #endif
 
+#ifdef CONFIG_INPUT_CAPELLA_CM3629
+extern int get_lightsensoradc(void);
+#else
+static inline int get_lightsensoradc(void)
+{
+	return 0;
+}
+#endif
+
 static unsigned char *fbram;
 static unsigned char *fbram_phys;
 static int fbram_size;
@@ -107,7 +116,6 @@ extern unsigned long mdp_timer_duration;
 static int msm_fb_register(struct msm_fb_data_type *mfd);
 static int msm_fb_open(struct fb_info *info, int user);
 static int msm_fb_release(struct fb_info *info, int user);
-static int msm_fb_release_all(struct fb_info *info, boolean is_all);
 static int msm_fb_pan_display(struct fb_var_screeninfo *var,
 			      struct fb_info *info);
 static int msm_fb_stop_sw_refresher(struct msm_fb_data_type *mfd);
@@ -213,7 +221,7 @@ static void msm_fb_set_bl_brightness(struct led_classdev *led_cdev,
 
 static struct led_classdev backlight_led = {
 	.name		= "lcd-backlight",
-	.brightness	= MAX_BACKLIGHT_BRIGHTNESS,
+	.brightness	= (MAX_BACKLIGHT_BRIGHTNESS * .75),
 	.brightness_set	= msm_fb_set_bl_brightness,
 };
 #endif
@@ -385,21 +393,56 @@ static void msm_fb_remove_sysfs(struct platform_device *pdev)
 	sysfs_remove_group(&mfd->fbi->dev->kobj, &msm_fb_attr_group);
 }
 
+#ifdef CONFIG_CABC_DIMMING_SWITCH
+static void dimming_do_work(struct work_struct *work)
+{
+	struct msm_fb_panel_data *pdata;
+	struct msm_fb_data_type *mfd = container_of(work,
+			struct msm_fb_data_type, dimming_work);
+
+	pdata = (struct msm_fb_panel_data *) mfd->pdev->dev.platform_data;
+
+	if (pdata && pdata->dimming_on)
+		pdata->dimming_on(mfd);
+}
+
+static void dimming_update(unsigned long data)
+{
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *) data;
+	queue_work(mfd->dimming_wq, &mfd->dimming_work);
+}
+#endif
+
+#ifdef CONFIG_SRE_CONTROL
+static void sre_do_work(struct work_struct *work)
+{
+	struct msm_fb_panel_data *pdata;
+	struct msm_fb_data_type *mfd = container_of(work,
+			struct msm_fb_data_type, sre_work);
+
+	pdata = (struct msm_fb_panel_data *) mfd->pdev->dev.platform_data;
+
+	if (pdata && pdata->sre_ctrl) {
+		pdata->sre_ctrl(mfd, get_lightsensoradc());
+		mod_timer(&mfd->sre_update_timer,
+				jiffies + msecs_to_jiffies(1000));
+	}
+}
+
+static void sre_update(unsigned long data)
+{
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *) data;
+	queue_work(mfd->sre_wq, &mfd->sre_work);
+}
+#endif
+
 static void bl_workqueue_handler(struct work_struct *work);
 
-static void msm_fb_shutdown(struct platform_device *pdev)
-{
-       struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
-       if (IS_ERR_OR_NULL(mfd)) {
-               pr_err("MFD is Null");
-               return;
-       }
-       lock_fb_info(mfd->fbi);
-       msm_fb_release_all(mfd->fbi, true);
-       unlock_fb_info(mfd->fbi);
-}
 static int msm_fb_probe(struct platform_device *pdev)
 {
+#if defined(CONFIG_CABC_DIMMING_SWITCH) || defined(CONFIG_SRE_CONTROL)
+	struct msm_fb_panel_data *pdata;
+#endif
 	struct msm_fb_data_type *mfd;
 	int rc;
 	int err = 0;
@@ -413,7 +456,11 @@ static int msm_fb_probe(struct platform_device *pdev)
 				pdev->resource[0].end -
 				pdev->resource[0].start + 1;
 			fbram_phys = (char *)pdev->resource[0].start;
-			fbram = __va(fbram_phys);
+#ifdef CONFIG_MACH_TENDERLOIN
+                        fbram = ioremap((unsigned long)fbram_phys, fbram_size);
+#else
+                        fbram = __va(fbram_phys);
+#endif
 
 			if (!fbram) {
 				printk(KERN_ERR "fbram ioremap failed!\n");
@@ -484,8 +531,10 @@ static int msm_fb_probe(struct platform_device *pdev)
 	if (!lcd_backlight_registered) {
 		if (led_classdev_register(&pdev->dev, &backlight_led))
 			printk(KERN_ERR "led_classdev_register failed\n");
-		else
+		else {
+			msm_fb_set_bl_brightness(&backlight_led, backlight_led.brightness);
 			lcd_backlight_registered = 1;
+		}
 	}
 #endif
 
@@ -504,6 +553,31 @@ static int msm_fb_probe(struct platform_device *pdev)
 		}
 	}
 
+#ifdef CONFIG_CABC_DIMMING_SWITCH
+	pdata = (struct msm_fb_panel_data *) mfd->pdev->dev.platform_data;
+	if (pdata && pdata->dimming_on) {
+		INIT_WORK(&mfd->dimming_work, dimming_do_work);
+		mfd->dimming_wq = create_workqueue("dimming_wq");
+		if (!mfd->dimming_wq)
+			pr_err("%s: cannot create dimming workqueue", __func__);
+		else
+			setup_timer(&mfd->dimming_update_timer,
+					dimming_update, (unsigned long) mfd);
+	}
+#endif
+
+#ifdef CONFIG_SRE_CONTROL
+	pdata = (struct msm_fb_panel_data *) mfd->pdev->dev.platform_data;
+	if (pdata && pdata->sre_ctrl) {
+		INIT_WORK(&mfd->sre_work, sre_do_work);
+		mfd->sre_wq = create_workqueue("sre_wq");
+		if (!mfd->sre_wq)
+			pr_err("%s: cannot create sre_wq", __func__);
+		else
+			setup_timer(&mfd->sre_update_timer,
+					sre_update, (unsigned long) mfd);
+	}
+#endif
 
 	return 0;
 }
@@ -835,7 +909,7 @@ static struct platform_driver msm_fb_driver = {
 	.suspend = msm_fb_suspend,
 	.resume = msm_fb_resume,
 #endif
-	.shutdown = msm_fb_shutdown,
+	.shutdown = NULL,
 	.driver = {
 		   /* Driver name must match the device name added in platform.c. */
 		   .name = "msm_fb",
@@ -1853,7 +1927,7 @@ static void msm_fb_free_base_pipe(struct msm_fb_data_type *mfd)
 	return 	mdp4_overlay_free_base_pipe(mfd);
 }
 
-static int msm_fb_release_all(struct fb_info *info, boolean is_all)
+static int msm_fb_release(struct fb_info *info, int user)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	int ret = 0, bl_level = 0;
@@ -1864,11 +1938,7 @@ static int msm_fb_release_all(struct fb_info *info, boolean is_all)
 		return -EINVAL;
 	}
 	msm_fb_pan_idle(mfd);
-
-	do {
-	        mfd->ref_cnt--;
-		pm_runtime_put(info->dev);
-	} while (is_all && mfd->ref_cnt);
+	mfd->ref_cnt--;
 
 	if (!mfd->ref_cnt) {
 		if (mfd->op_enable) {
@@ -1890,11 +1960,8 @@ static int msm_fb_release_all(struct fb_info *info, boolean is_all)
 		}
 	}
 
+	pm_runtime_put(info->dev);
 	return ret;
-}
-static int msm_fb_release(struct fb_info *info, int user)
-{
-        return msm_fb_release_all(info, false);
 }
 
 void msm_fb_wait_for_fence(struct msm_fb_data_type *mfd)
@@ -2058,13 +2125,16 @@ static void bl_workqueue_handler(struct work_struct *work)
 	struct msm_fb_data_type *mfd = container_of(to_delayed_work(work),
 				struct msm_fb_data_type, backlight_worker);
 	struct msm_fb_panel_data *pdata = mfd->pdev->dev.platform_data;
+	__u32 temp = unset_bl_level;
 
 	down(&mfd->sem);
 	if ((pdata) && (pdata->set_backlight) && (!bl_updated)
 					&& (mfd->panel_power_on)) {
-		mfd->bl_level = unset_bl_level;
+		msm_fb_scale_bl(mfd->panel_info.bl_max, &temp);
+		mfd->bl_level = temp;
 		pdata->set_backlight(mfd);
 		bl_level_old = unset_bl_level;
+		mfd->bl_level = unset_bl_level;
 		bl_updated = 1;
 	}
 	up(&mfd->sem);
@@ -2083,6 +2153,9 @@ static int msm_fb_pan_display(struct fb_var_screeninfo *var,
 static int msm_fb_pan_display_sub(struct fb_var_screeninfo *var,
 			      struct fb_info *info)
 {
+#if defined(CONFIG_CABC_DIMMING_SWITCH) || defined(CONFIG_SRE_CONTROL)
+	struct msm_fb_panel_data *pdata;
+#endif
 	struct mdp_dirty_region dirty;
 	struct mdp_dirty_region *dirtyPtr = NULL;
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
@@ -2178,6 +2251,19 @@ static int msm_fb_pan_display_sub(struct fb_var_screeninfo *var,
 		pr_err("%s: unmap secure res failed\n", __func__);
 
 	up(&msm_fb_pan_sem);
+
+#ifdef CONFIG_CABC_DIMMING_SWITCH
+	pdata = (struct msm_fb_panel_data *) mfd->pdev->dev.platform_data;
+	if (pdata && pdata->dimming_on)
+		mod_timer(&mfd->dimming_update_timer,
+				jiffies + msecs_to_jiffies(1000));
+#endif
+#ifdef CONFIG_SRE_CONTROL
+	pdata = (struct msm_fb_panel_data *) mfd->pdev->dev.platform_data;
+	if (pdata && pdata->sre_ctrl)
+		mod_timer(&mfd->sre_update_timer,
+				jiffies + msecs_to_jiffies(50));
+#endif
 
 	if (!bl_updated)
 		schedule_delayed_work(&mfd->backlight_worker,

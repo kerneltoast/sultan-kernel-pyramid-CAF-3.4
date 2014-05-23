@@ -417,6 +417,8 @@ void mipi_dsi_prepare_ahb_clocks(void)
 	clk_prepare(dsi_m_pclk);
 	clk_prepare(dsi_s_pclk);
 }
+//	clk_prepare(dsi_byte_div_clk);
+//	clk_prepare(dsi_esc_clk);
 
 void mipi_dsi_unprepare_ahb_clocks(void)
 {
@@ -424,7 +426,6 @@ void mipi_dsi_unprepare_ahb_clocks(void)
 	clk_unprepare(dsi_s_pclk);
 	clk_unprepare(amp_pclk);
 }
-
 void mipi_dsi_unprepare_clocks(void)
 {
 	clk_unprepare(dsi_esc_clk);
@@ -651,6 +652,15 @@ void hdmi_msm_powerdown_phy(void)
 	udelay(10);
 	/* Disable PLL */
 	HDMI_OUTP_ND(0x030C, 0x00);
+
+#ifdef WORKAROUND_FOR_HDMI_CURRENT_LEAKAGE_FIX
+	HDMI_OUTP_ND(0x02D4, 0x4);	//Assert RESET PHY from controller
+	udelay(10);
+	HDMI_OUTP_ND(0x02D4, 0x0);	//De-assert RESET PHY from controller
+	HDMI_OUTP_ND(0x0308, 0x1F); //Turn off Driver
+	udelay(10);
+#endif
+
 	/* Power down PHY */
 	HDMI_OUTP_ND(0x0308, 0x7F); /*0b01111111*/
 }
