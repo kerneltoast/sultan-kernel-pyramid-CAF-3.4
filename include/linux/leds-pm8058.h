@@ -85,5 +85,9 @@ struct pm8058_led_data {
 	int lut_flag;
 	int out_current;
 };
+
 void pm8xxx_led_current_set_for_key (int brightness_key);
+
+extern void pm8058_drvx_led_brightness_set(struct led_classdev *led_cdev,
+					   enum led_brightness brightness);
 #endif 
