@@ -2493,7 +2493,6 @@ static int mdp_on(struct platform_device *pdev)
 	else if (mdp_pdata->mdp_gamma_cool && mdp_gamma_cooler_colors)
 		mdp_pdata->mdp_gamma_cool();
 
-
 	if (ret == 0)
 		ret = panel_next_late_init(pdev);
 
@@ -2854,7 +2853,6 @@ void mdp_color_enhancement(const struct mdp_table_entry *reg_seq, int size)
 
         return ;
 }
-
 
 static int mdp_probe(struct platform_device *pdev)
 {
