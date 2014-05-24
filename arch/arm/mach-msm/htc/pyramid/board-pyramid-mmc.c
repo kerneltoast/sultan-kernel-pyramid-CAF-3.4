@@ -35,17 +35,7 @@
 #include "devices.h"
 #include "board-pyramid.h"
 #include <mach/proc_comm.h>
-#include "board-common-wimax.h"
 #include <mach/mpm.h>
-
-#ifdef CONFIG_WIMAX_SERIAL_MSM
-#include <mach/msm_serial_wimax.h>
-#include <linux/irq.h>
-
-#define MSM_GSBI3_PHYS		0x16200000
-#define MSM_UART3_PHYS 		(MSM_GSBI3_PHYS + 0x40000)
-#define INT_UART3_IRQ		GSBI3_UARTDM_IRQ
-#endif
 
 #include <linux/irq.h>
 
