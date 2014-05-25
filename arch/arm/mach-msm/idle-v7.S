@@ -113,7 +113,18 @@ ENTRY(msm_pm_collapse)
 	cmp	r1, #1
 	bne	skip
 	bl	v7_flush_dcache_all
+	ldr	r1, =msm_pm_flush_l2_fn
+	ldr	r1, [r1]
+	cmp	r1, #0
+	blxne	r1
+
 skip:
+	ldr	r1, =msm_pm_disable_l2_fn
+	ldr	r1, [r1]
+	cmp	r1, #0
+	blxne	r1
+	dmb
+
 	mrc	p15, 0, r0, c0, c0, 5	/* MPIDR */
 	and	r0, r0, #15		/* what CPU am I */
 
@@ -168,6 +179,11 @@ skip_pc_debug1:
 	str	r2, [r1]
 
 skip_pc_debug2:
+	ldr	r1, =msm_pm_enable_l2_fn
+	ldr	r1, [r1]
+	cmp	r1, #0
+	blxne	r1
+	dmb
 
 #if defined(CONFIG_MSM_JTAG) || defined(CONFIG_MSM_JTAG_MM)
 	bl	msm_jtag_restore_state
@@ -264,11 +280,16 @@ msm_pm_pa_to_va:
 	SET_SMP_COHERENCY ON
 #endif
 
-#if defined(CONFIG_MSM_JTAG) || defined(CONFIG_MSM_JTAG_MM)
+	ldr	r1, =msm_pm_enable_l2_fn
+	ldr	r1, [r1]
+	cmp	r1, #0
 	stmfd   sp!, {lr}
+	blxne	r1
+	dmb
+#if defined(CONFIG_MSM_JTAG) || defined(CONFIG_MSM_JTAG_MM)
 	bl      msm_jtag_restore_state
-	ldmfd   sp!, {lr}
 #endif
+	ldmfd   sp!, {lr}
 	mov     r0, #1
 	bx      lr
 	nop
@@ -353,6 +374,18 @@ msm_pc_debug_counters_phys:
 
 	.globl msm_pc_debug_counters
 msm_pc_debug_counters:
+	.long 0x0
+
+	.globl msm_pm_enable_l2_fn
+msm_pm_enable_l2_fn:
+	.long 0x0
+
+	.globl msm_pm_disable_l2_fn
+msm_pm_disable_l2_fn:
+	.long 0x0
+
+	.globl msm_pm_flush_l2_fn
+msm_pm_flush_l2_fn:
 	.long 0x0
 
 /*
