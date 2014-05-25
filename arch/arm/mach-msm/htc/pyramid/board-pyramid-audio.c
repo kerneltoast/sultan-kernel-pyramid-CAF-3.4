@@ -308,18 +308,7 @@ int pyramid_support_back_mic(void)
 
 void pyramid_get_acoustic_tables(struct acoustic_tables *tb)
 {
-	switch (system_rev) {
-	case 0:
-	case 1:
-		strcpy(tb->tpa2051, "TPA2051_CFG.csv");
-		break;
-	case 2:
-		strcpy(tb->tpa2051, "TPA2051_CFG_XC.csv");
-		break;
-	default:
-		strcpy(tb->tpa2051, "TPA2051_CFG_XC.csv");
-		break;
-	}
+	strcpy(tb->tpa2051, "TPA2051_CFG.csv");
 }
 
 int pyramid_support_beats(void)
