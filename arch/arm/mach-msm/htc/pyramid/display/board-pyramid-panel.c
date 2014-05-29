@@ -1183,7 +1183,7 @@ static struct platform_device mipi_dsi_pyramid_panel_device = {
 	.id = 0,
 };
 
-#ifdef CONFIG_MSM_BUS_SCALING
+#if defined (CONFIG_MSM_BUS_SCALING) && defined (CONFIG_FB_MSM_DTV)
 static struct msm_bus_vectors dtv_bus_init_vectors[] = {
 	{
 		.src = MSM_BUS_MASTER_MDP_PORT0,
@@ -1217,6 +1217,8 @@ static struct msm_bus_scale_pdata dtv_bus_scale_pdata = {
 };
 #endif
 
+#ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
+#ifdef CONFIG_FB_MSM_DTV
 static struct lcdc_platform_data dtv_pdata = {
 #ifdef CONFIG_MSM_BUS_SCALING
 	.bus_scale_table = &dtv_bus_scale_pdata,
@@ -1225,8 +1227,8 @@ static struct lcdc_platform_data dtv_pdata = {
 //	.lcdc_power_save = hdmi_panel_power,
 #endif
 };
+#endif
 
-#ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
 int hdmi_enable_5v(int on)
 {
 	static struct regulator *reg_8901_hdmi_mvs;	/* HDMI_5V */
@@ -1387,13 +1389,17 @@ int mipi_cmd_pyramid_qhd_pt_init(void);
 
 void __init pyramid_init_fb(void)
 {
+#ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
 	msm8x60_set_display_params("mipi_pyramid", "hdmi_msm");
+#else
+	msm8x60_set_display_params("mipi_pyramid", "NULL");
+#endif
 	platform_device_register(&msm_fb_device);
 	platform_device_register(&mipi_dsi_pyramid_panel_device);
 	msm_fb_register_device("mdp", &mdp_pdata);
 	msm_fb_register_device("mipi_dsi", &mipi_dsi_pdata);
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
 	platform_device_register(&hdmi_msm_device);
-#endif
         msm_fb_register_device("dtv", &dtv_pdata);
+#endif
 }
