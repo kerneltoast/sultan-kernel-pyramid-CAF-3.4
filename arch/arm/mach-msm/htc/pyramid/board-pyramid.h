@@ -23,8 +23,8 @@
 
 #define PYRAMID_PROJECT_NAME	"pyramid"
 
-#define MSM_RAM_CONSOLE_BASE	0x46400000
-#define MSM_RAM_CONSOLE_SIZE	0x300000
+#define MSM_RAM_CONSOLE_BASE	0x40300000
+#define MSM_RAM_CONSOLE_SIZE	0x100000
 
 /* Memory map */
 #define MSM_SMI_BASE         0x38000000
@@ -42,20 +42,26 @@
 #define MSM_ION_MM_FW_SIZE   0x200000
 #define MSM_ION_MM_SIZE      0x3D00000
 #define MSM_ION_MFC_SIZE     0x100000
-#define MSM_ION_SF_SIZE      0x2B00000
-#define MSM_ION_WB_SIZE      0x500000
+#define MSM_ION_SF_SIZE      0x2A00000
 #define MSM_ION_AUDIO_SIZE   0x4CF000
 
-#define MSM_ION_HEAP_NUM     7
+#define MSM_ION_HEAP_NUM     6
 
 #define MSM_ION_MM_FW_BASE   0x38000000
 #define MSM_ION_MM_BASE      0x38200000
 #define MSM_ION_MFC_BASE     0x3BF00000
-#define MSM_ION_SF_BASE      0x40300000
-#define MSM_ION_WB_BASE      0x45C00000
 
-#define PHY_BASE_ADDR1       0x48000000
-#define SIZE_ADDR1           0x28000000
+#define PHY_BASE_ADDR1       0x40400000
+#define SIZE_ADDR1           0x2A00000
+
+#define PHY_BASE_ADDR2       0x48000000
+#define SIZE_ADDR2           0x28000000
+
+#define PHY_BASE_ADDR3       0x45C00000
+#define SIZE_ADDR3           0x500000
+
+#define PHY_BASE_ADDR4       0x46400000
+#define SIZE_ADDR4           0x300000
 
 /* GPIO definition */
 

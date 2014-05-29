@@ -1608,11 +1608,6 @@ static struct ion_cp_heap_pdata cp_mfc_ion_pdata = {
 	.align = PAGE_SIZE,
 };
 
-static struct ion_cp_heap_pdata cp_wb_ion_pdata = {
-	.permission_type = IPT_TYPE_MDP_WRITEBACK,
-	.align = PAGE_SIZE,
-};
-
 static struct ion_co_heap_pdata co_mm_fw_ion_pdata = {
 	.adjacent_mem_id = ION_CP_MM_HEAP_ID,
 	.align = SZ_128K,
@@ -1672,18 +1667,8 @@ struct ion_platform_heap msm8x60_heaps [] = {
 			.type	= ION_HEAP_TYPE_CARVEOUT,
 			.name	= ION_SF_HEAP_NAME,
 			.size	= MSM_ION_SF_SIZE,
-			.base	= MSM_ION_SF_BASE,
 			.memory_type = ION_EBI_TYPE,
 			.extra_data = &co_sf_ion_pdata,
-		},
-		{
-			.id	= ION_CP_WB_HEAP_ID,
-			.type	= ION_HEAP_TYPE_CP,
-			.name	= ION_WB_HEAP_NAME,
-			.size	= MSM_ION_WB_SIZE,
-			.base	= MSM_ION_WB_BASE,
-			.memory_type = ION_EBI_TYPE,
-			.extra_data = &cp_wb_ion_pdata,
 		},
 		{
 			.id	= ION_AUDIO_HEAP_ID,
@@ -2443,9 +2428,15 @@ static void __init pyramid_fixup(struct tag *tags,
 	printk(KERN_DEBUG "%s: mem_size_mb=%u\n", __func__, mem_size_mb);
 
 	engineerid = parse_tag_engineerid(tags);
-	mi->nr_banks = 1;
+	mi->nr_banks = 4;
 	mi->bank[0].start = PHY_BASE_ADDR1;
 	mi->bank[0].size = SIZE_ADDR1;
+	mi->bank[1].start = PHY_BASE_ADDR2;
+	mi->bank[1].size = SIZE_ADDR2;
+	mi->bank[2].start = PHY_BASE_ADDR3;
+	mi->bank[2].size = SIZE_ADDR3;
+	mi->bank[3].start = PHY_BASE_ADDR4;
+	mi->bank[3].size = SIZE_ADDR4;
 }
 
 MACHINE_START(PYRAMID, "pyramid")	
