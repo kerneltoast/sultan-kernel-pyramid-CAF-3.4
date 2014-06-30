@@ -383,7 +383,6 @@ int tps_set_charger_ctrl(u32 ctl)
 		
 		alarm_cancel(&tps65200_check_alarm);
 		break;
-	case POWER_SUPPLY_ENABLE_SLOW_CHARGE:
 	case POWER_SUPPLY_ENABLE_WIRELESS_CHARGE:
 		tps65200_dump_register();
 		tps65200_i2c_write_byte(0x29, 0x01);
@@ -423,6 +422,7 @@ int tps_set_charger_ctrl(u32 ctl)
 		}
 #endif 
 		break;
+	case POWER_SUPPLY_ENABLE_SLOW_CHARGE:
 	case POWER_SUPPLY_ENABLE_FAST_CHARGE:
 		tps65200_dump_register();
 		tps65200_i2c_write_byte(0x29, 0x01);
