@@ -70,7 +70,7 @@ static void msm_thermal_main(struct work_struct *work)
 	struct cpufreq_policy *policy;
 	struct tsens_device tsens_dev;
 	unsigned long temp;
-	unsigned int maxfreq = 0;
+	static unsigned int maxfreq = 0;
 	int ret;
 
 	tsens_dev.sensor_num = TSENS_SENSOR;
@@ -94,8 +94,9 @@ static void msm_thermal_main(struct work_struct *work)
 		pr_warn(THERM_LOG "Low trip point triggered! temp: %lu\n", temp);
 	/* low clear point */
 	} else if ((temp <= therm_conf.reset_low_thresh) && thermal_throttled) {
-		thermal_throttled = 0;
 		update_maxfreq(policy, saved_maxfreq);
+		thermal_throttled = 0;
+		maxfreq = 0;
 		pr_warn(THERM_LOG "Low trip point cleared! temp: %lu\n", temp);
 	/* mid trip point */
 	} else if ((temp >= therm_conf.trip_mid_thresh) &&
@@ -124,7 +125,7 @@ static void msm_thermal_main(struct work_struct *work)
 		pr_warn(THERM_LOG "High trip point cleared! temp: %lu\n", temp);
 	}
 
-	if (thermal_throttled && maxfreq)
+	if (maxfreq)
 		update_maxfreq(policy, maxfreq);
 
 	cpufreq_cpu_put(policy);
