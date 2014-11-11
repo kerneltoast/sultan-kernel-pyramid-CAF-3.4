@@ -1,5 +1,7 @@
 /* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
  *
+ * Copyright (c) 2014, Sultanxda <sultanxda@gmail.com>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -11,261 +13,126 @@
  *
  */
 
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/module.h>
 #include <linux/cpufreq.h>
-#include <linux/mutex.h>
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/msm_tsens.h>
-#include <linux/workqueue.h>
-#include <linux/cpu.h>
 
-#define DEF_TEMP_SENSOR      0
+#define TSENS_SENSOR 0
 
-//max thermal limit
-#define DEF_ALLOWED_MAX_HIGH 80
-#define DEF_RESET_MAX_HIGH   75
-#define DEF_ALLOWED_MAX_FREQ 384000
+#define THERM_LOG "MSM_THERMAL: "
 
-//mid thermal limit
-#define DEF_ALLOWED_MID_HIGH 65
-#define DEF_RESET_MID_HIGH   61
-#define DEF_ALLOWED_MID_FREQ 972000
+static unsigned int thermal_throttled = 0;
+static unsigned int saved_maxfreq = 0;
 
-//low thermal limit
-#define DEF_ALLOWED_LOW_HIGH 56
-#define DEF_RESET_LOW_HIGH   53
-#define DEF_ALLOWED_LOW_FREQ 1188000
-
-//Sampling interval
-#define DEF_THERMAL_CHECK_MS 1000
-
-static int enabled = 1;
-
-//Throttling indicator, 0=not throttled, 1=low, 2=mid, 3=max
-static int thermal_throttled = 0;
-
-//Save the cpu max freq for each core before throttling
-static int pre_throt_max0 = 0;
-static int pre_throt_max1 = 0;
-
-static struct delayed_work check_temp_work;
+static struct delayed_work msm_thermal_main_work;
 
 static struct msm_thermal_tuners {
-	unsigned int allowed_max_high;
-	unsigned int allowed_max_low;
-	unsigned int allowed_max_freq;
+	unsigned int trip_high_thresh;
+	unsigned int reset_high_thresh;
+	unsigned int freq_high_thresh;
 
-	unsigned int allowed_mid_high;
-	unsigned int allowed_mid_low;
-	unsigned int allowed_mid_freq;
+	unsigned int trip_mid_thresh;
+	unsigned int reset_mid_thresh;
+	unsigned int freq_mid_thresh;
 
-	unsigned int allowed_low_high;
-	unsigned int allowed_low_low;
-	unsigned int allowed_low_freq;
+	unsigned int trip_low_thresh;
+	unsigned int reset_low_thresh;
+	unsigned int freq_low_thresh;
 
 	unsigned int check_interval_ms;
-} msm_thermal_tuners_ins = {
-	.allowed_max_high = DEF_ALLOWED_MAX_HIGH,
-	.allowed_max_low = DEF_RESET_MAX_HIGH,
-	.allowed_max_freq = DEF_ALLOWED_MAX_FREQ,
+} therm_conf = {
+	.trip_high_thresh = 80,
+	.reset_high_thresh = 75,
+	.freq_high_thresh = 384000,
 
-	.allowed_mid_high = DEF_ALLOWED_MID_HIGH,
-	.allowed_mid_low = DEF_RESET_MID_HIGH,
-	.allowed_mid_freq = DEF_ALLOWED_MID_FREQ,
+	.trip_mid_thresh = 69,
+	.reset_mid_thresh = 65,
+	.freq_mid_thresh = 972000,
 
-	.allowed_low_high = DEF_ALLOWED_LOW_HIGH,
-	.allowed_low_low = DEF_RESET_LOW_HIGH,
-	.allowed_low_freq = DEF_ALLOWED_LOW_FREQ,
+	.trip_low_thresh = 64,
+	.reset_low_thresh = 60,
+	.freq_low_thresh = 1188000,
 
-	.check_interval_ms = DEF_THERMAL_CHECK_MS,
+	.check_interval_ms = 3000,
 };
 
-static int update_cpu_max_freq(struct cpufreq_policy *cpu_policy,
-			       int cpu, int max_freq)
+static void update_maxfreq(struct cpufreq_policy *policy, unsigned int maxfreq)
 {
-	int ret = 0;
-
-	if (!cpu_policy)
-		return -EINVAL;
-
-	cpufreq_verify_within_limits(cpu_policy,
-				cpu_policy->min, max_freq);
-	cpu_policy->user_policy.max = max_freq;
-
-	ret = cpufreq_update_policy(cpu);
-	if (!ret)
-		pr_info("msm_thermal: Setting core%d max frequency to %d\n",
-			cpu, max_freq);
-
-	return ret;
+	policy->user_policy.max = maxfreq;
+	cpufreq_update_policy(0);
+	pr_warn(THERM_LOG "Setting CPU max frequency to %d\n", maxfreq);
 }
 
-static void check_temp(struct work_struct *work)
+static void msm_thermal_main(struct work_struct *work)
 {
-	struct cpufreq_policy *cpu_policy = NULL;
+	struct cpufreq_policy *policy;
 	struct tsens_device tsens_dev;
-	unsigned long temp = 0;
-	unsigned int max_freq = 0;
-	int update_policy = 0;
-	int cpu = 0;
-	int ret = 0;
+	unsigned long temp;
+	unsigned int maxfreq = 0;
+	int ret;
 
-	tsens_dev.sensor_num = DEF_TEMP_SENSOR;
+	tsens_dev.sensor_num = TSENS_SENSOR;
 	ret = tsens_get_temp(&tsens_dev, &temp);
-	if (ret) {
-		pr_err("msm_thermal: Unable to read TSENS sensor %d\n",
+	if (ret || temp > 1000) {
+		pr_err(THERM_LOG "Unable to read tsens sensor #%d\n",
 				tsens_dev.sensor_num);
 		goto reschedule;
 	}
 
-	for_each_online_cpu(cpu) {
-		update_policy = 0;
-		cpu_policy = cpufreq_cpu_get(cpu);
-		if (!cpu_policy) {
-			pr_debug("msm_thermal: NULL policy on cpu %d\n", cpu);
-			continue;
-		}
+	policy = cpufreq_cpu_get(0);
 
-		//low trip point
-		if ((temp >= msm_thermal_tuners_ins.allowed_low_high) &&
-		    (temp < msm_thermal_tuners_ins.allowed_mid_high) &&
-		    (cpu_policy->max > msm_thermal_tuners_ins.allowed_low_freq)) {
-			update_policy = 1;
-			/* save pre-throttled max freq value for each core */
-		if (cpu == 0) {
-			pre_throt_max0 = cpu_policy->user_policy.max;
-		} else if (cpu == 1) {
-			pre_throt_max1 = cpu_policy->user_policy.max;
-		}
-			max_freq = msm_thermal_tuners_ins.allowed_low_freq;
-			thermal_throttled = 1;
-			pr_warn("msm_thermal: Thermal Throttled (low)! temp: %lu\n", temp);
-		//low clr point
-		} else if ((temp < msm_thermal_tuners_ins.allowed_low_low) &&
-			   (thermal_throttled > 0)) {
-			if (cpu_policy->max < cpu_policy->cpuinfo.max_freq) {
-				update_policy = 1;
-				if ((pre_throt_max0 != 0) && (pre_throt_max1 != 0)) {
-					if (cpu == 0) {
-					max_freq = pre_throt_max0;
-					} else if (cpu == 1) {
-					max_freq = pre_throt_max1;
-					}
-				} else if ((pre_throt_max0 == 0) && (pre_throt_max1 != 0)) {
-				max_freq = pre_throt_max1;
-				} else if ((pre_throt_max0 != 0) && (pre_throt_max1 == 0)) {
-				max_freq = pre_throt_max0;
-				} else if ((pre_throt_max0 == 0) && (pre_throt_max1 == 0)) {
-				max_freq = 1512000;
-				pr_err("msm_thermal: FATAL ERROR! pre_throt_max0=0 and pre_throt_max1=0!\n");
-				pr_err("msm_thermal: Falling back to 1512MHz to avoid a meltdown!\n");
-				}
-				/* wait until 2nd core is unthrottled */
-				if (cpu == 1)
-					thermal_throttled = 0;
-				pr_warn("msm_thermal: Low Thermal Throttling Ended! temp: %lu\n", temp);
-			}
-		//mid trip point
-		} else if ((temp >= msm_thermal_tuners_ins.allowed_mid_high) &&
-			   (temp < msm_thermal_tuners_ins.allowed_max_high) &&
-			   (cpu_policy->max > msm_thermal_tuners_ins.allowed_mid_freq)) {
-			update_policy = 1;
-			max_freq = msm_thermal_tuners_ins.allowed_mid_freq;
-			thermal_throttled = 2;
-			pr_warn("msm_thermal: Thermal Throttled (mid)! temp: %lu\n", temp);
-		//mid clr point
-		} else if ( (temp < msm_thermal_tuners_ins.allowed_mid_low) &&
-			   (thermal_throttled > 1)) {
-			if (cpu_policy->max < cpu_policy->cpuinfo.max_freq) {
-				max_freq = msm_thermal_tuners_ins.allowed_low_freq;
-				update_policy = 1;
-				/* wait until 2nd core is unthrottled */
-				if (cpu == 1)
-					thermal_throttled = 1;
-				pr_warn("msm_thermal: Mid Thermal Throttling Ended! temp: %lu\n", temp);
-			}
-		//max trip point
-		} else if ((temp >= msm_thermal_tuners_ins.allowed_max_high) &&
-			   (cpu_policy->max > msm_thermal_tuners_ins.allowed_max_freq)) {
-			if (temp > 1000) {
-				pr_err("msm_thermal: ERROR! Temperature is way out of bounds!\n");
-				pr_err("msm_thermal: temp: %lu\n", temp);
-				goto reschedule;
-			} else {
-				update_policy = 1;
-				max_freq = msm_thermal_tuners_ins.allowed_max_freq;
-				thermal_throttled = 3;
-				pr_warn("msm_thermal: Thermal Throttled (max)! temp: %lu\n", temp);
-			}
-		//max clr point
-		} else if ((temp < msm_thermal_tuners_ins.allowed_max_low) &&
-			   (thermal_throttled > 2)) {
-			if (cpu_policy->max < cpu_policy->cpuinfo.max_freq) {
-				max_freq = msm_thermal_tuners_ins.allowed_mid_freq;
-				update_policy = 1;
-				/* wait until 2nd core is unthrottled */
-				if (cpu == 1)
-					thermal_throttled = 2;
-				pr_warn("msm_thermal: Max Thermal Throttling Ended! temp: %lu\n", temp);
-			}
-		}
+	if (!thermal_throttled || saved_maxfreq < policy->user_policy.max)
+		saved_maxfreq = policy->user_policy.max;
 
-		if (update_policy)
-			update_cpu_max_freq(cpu_policy, cpu, max_freq);
-
-		cpufreq_cpu_put(cpu_policy);
+	/* low trip point */
+	if ((temp >= therm_conf.trip_low_thresh) &&
+	    (temp < therm_conf.trip_mid_thresh) && !thermal_throttled) {
+		maxfreq = therm_conf.freq_low_thresh;
+		thermal_throttled = 1;
+		pr_warn(THERM_LOG "Low trip point triggered! temp: %lu\n", temp);
+	/* low clear point */
+	} else if ((temp <= therm_conf.reset_low_thresh) && thermal_throttled) {
+		thermal_throttled = 0;
+		update_maxfreq(policy, saved_maxfreq);
+		pr_warn(THERM_LOG "Low trip point cleared! temp: %lu\n", temp);
+	/* mid trip point */
+	} else if ((temp >= therm_conf.trip_mid_thresh) &&
+		   (temp < therm_conf.trip_high_thresh) &&
+		   (thermal_throttled < 2)) {
+		maxfreq = therm_conf.freq_mid_thresh;
+		thermal_throttled = 2;
+		pr_warn(THERM_LOG "Mid trip point triggered! temp: %lu\n", temp);
+	/* mid clear point */
+	} else if ((temp < therm_conf.reset_mid_thresh) &&
+		   (thermal_throttled > 1)) {
+		maxfreq = therm_conf.freq_low_thresh;
+		thermal_throttled = 1;
+		pr_warn(THERM_LOG "Mid trip point cleared! temp: %lu\n", temp);
+	/* high trip point */
+	} else if ((temp >= therm_conf.trip_high_thresh) &&
+		   (thermal_throttled < 3)) {
+		maxfreq = therm_conf.freq_high_thresh;
+		thermal_throttled = 3;
+		pr_warn(THERM_LOG "High trip point triggered! temp: %lu\n", temp);
+	/* high clear point */
+	} else if ((temp < therm_conf.reset_high_thresh) &&
+		   (thermal_throttled > 2)) {
+		maxfreq = therm_conf.freq_mid_thresh;
+		thermal_throttled = 2;
+		pr_warn(THERM_LOG "High trip point cleared! temp: %lu\n", temp);
 	}
+
+	if (thermal_throttled && maxfreq)
+		update_maxfreq(policy, maxfreq);
+
+	cpufreq_cpu_put(policy);
 
 reschedule:
-	if (enabled)
-		schedule_delayed_work(&check_temp_work,
-				msecs_to_jiffies(msm_thermal_tuners_ins.check_interval_ms));
+	schedule_delayed_work(&msm_thermal_main_work,
+			msecs_to_jiffies(therm_conf.check_interval_ms));
 }
-
-static void disable_msm_thermal(void)
-{
-	int cpu = 0;
-	struct cpufreq_policy *cpu_policy = NULL;
-
-	/* make sure check_temp is no longer running */
-	cancel_delayed_work(&check_temp_work);
-	flush_scheduled_work();
-
-	for_each_online_cpu(cpu) {
-		cpu_policy = cpufreq_cpu_get(cpu);
-		if (cpu_policy) {
-			if (cpu_policy->max < cpu_policy->cpuinfo.max_freq)
-				update_cpu_max_freq(cpu_policy, cpu,
-						    cpu_policy->
-						    cpuinfo.max_freq);
-			cpufreq_cpu_put(cpu_policy);
-		}
-	}
-}
-
-static int set_enabled(const char *val, const struct kernel_param *kp)
-{
-	int ret = 0;
-
-	ret = param_set_bool(val, kp);
-	if (!enabled)
-		disable_msm_thermal();
-	else
-		pr_info("msm_thermal: no action for enabled = %d\n", enabled);
-
-	pr_info("msm_thermal: enabled = %d\n", enabled);
-
-	return ret;
-}
-
-static struct kernel_param_ops module_ops = {
-	.set = set_enabled,
-	.get = param_get_bool,
-};
-
-module_param_cb(enabled, &module_ops, &enabled, 0644);
-MODULE_PARM_DESC(enabled, "enforce thermal limit on cpu");
 
 /**************************** SYSFS START ****************************/
 struct kobject *msm_thermal_kobject;
@@ -274,21 +141,20 @@ struct kobject *msm_thermal_kobject;
 static ssize_t show_##file_name						\
 (struct kobject *kobj, struct attribute *attr, char *buf)               \
 {									\
-	return sprintf(buf, "%u\n", msm_thermal_tuners_ins.object);				\
+	return sprintf(buf, "%u\n", therm_conf.object);			\
 }
 
-show_one(allowed_max_high, allowed_max_high);
-show_one(allowed_max_low, allowed_max_low);
-show_one(allowed_max_freq, allowed_max_freq);
-show_one(allowed_mid_high, allowed_mid_high);
-show_one(allowed_mid_low, allowed_mid_low);
-show_one(allowed_mid_freq, allowed_mid_freq);
-show_one(allowed_low_high, allowed_low_high);
-show_one(allowed_low_low, allowed_low_low);
-show_one(allowed_low_freq, allowed_low_freq);
-show_one(check_interval_ms, check_interval_ms);
+show_one(trip_high_thresh, trip_high_thresh);
+show_one(reset_high_thresh, reset_high_thresh);
+show_one(freq_high_thresh, freq_high_thresh);
+show_one(trip_mid_thresh, trip_mid_thresh);
+show_one(reset_mid_thresh, reset_mid_thresh);
+show_one(freq_mid_thresh, freq_mid_thresh);
+show_one(trip_low_thresh, trip_low_thresh);
+show_one(reset_low_thresh, reset_low_thresh);
+show_one(freq_low_thresh, freq_low_thresh);
 
-static ssize_t store_allowed_max_high(struct kobject *a, struct attribute *b,
+static ssize_t store_trip_high_thresh(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
 	unsigned int input;
@@ -297,12 +163,12 @@ static ssize_t store_allowed_max_high(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	msm_thermal_tuners_ins.allowed_max_high = input;
+	therm_conf.trip_high_thresh = input;
 
 	return count;
 }
 
-static ssize_t store_allowed_max_low(struct kobject *a, struct attribute *b,
+static ssize_t store_reset_high_thresh(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
 	unsigned int input;
@@ -311,12 +177,12 @@ static ssize_t store_allowed_max_low(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	msm_thermal_tuners_ins.allowed_max_low = input;
+	therm_conf.reset_high_thresh = input;
 
 	return count;
 }
 
-static ssize_t store_allowed_max_freq(struct kobject *a, struct attribute *b,
+static ssize_t store_freq_high_thresh(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
 	unsigned int input;
@@ -325,12 +191,12 @@ static ssize_t store_allowed_max_freq(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	msm_thermal_tuners_ins.allowed_max_freq = input;
+	therm_conf.freq_high_thresh = input;
 
 	return count;
 }
 
-static ssize_t store_allowed_mid_high(struct kobject *a, struct attribute *b,
+static ssize_t store_trip_mid_thresh(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
 	unsigned int input;
@@ -339,12 +205,12 @@ static ssize_t store_allowed_mid_high(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	msm_thermal_tuners_ins.allowed_mid_high = input;
+	therm_conf.trip_mid_thresh = input;
 
 	return count;
 }
 
-static ssize_t store_allowed_mid_low(struct kobject *a, struct attribute *b,
+static ssize_t store_reset_mid_thresh(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
 	unsigned int input;
@@ -353,12 +219,12 @@ static ssize_t store_allowed_mid_low(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	msm_thermal_tuners_ins.allowed_mid_low = input;
+	therm_conf.reset_mid_thresh = input;
 
 	return count;
 }
 
-static ssize_t store_allowed_mid_freq(struct kobject *a, struct attribute *b,
+static ssize_t store_freq_mid_thresh(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
 	unsigned int input;
@@ -367,12 +233,12 @@ static ssize_t store_allowed_mid_freq(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	msm_thermal_tuners_ins.allowed_mid_freq = input;
+	therm_conf.freq_mid_thresh = input;
 
 	return count;
 }
 
-static ssize_t store_allowed_low_high(struct kobject *a, struct attribute *b,
+static ssize_t store_trip_low_thresh(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
 	unsigned int input;
@@ -381,12 +247,12 @@ static ssize_t store_allowed_low_high(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	msm_thermal_tuners_ins.allowed_low_high = input;
+	therm_conf.trip_low_thresh = input;
 
 	return count;
 }
 
-static ssize_t store_allowed_low_low(struct kobject *a, struct attribute *b,
+static ssize_t store_reset_low_thresh(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
 	unsigned int input;
@@ -395,12 +261,12 @@ static ssize_t store_allowed_low_low(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	msm_thermal_tuners_ins.allowed_low_low = input;
+	therm_conf.reset_low_thresh = input;
 
 	return count;
 }
 
-static ssize_t store_allowed_low_freq(struct kobject *a, struct attribute *b,
+static ssize_t store_freq_low_thresh(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
 	unsigned int input;
@@ -409,51 +275,33 @@ static ssize_t store_allowed_low_freq(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	msm_thermal_tuners_ins.allowed_low_freq = input;
+	therm_conf.freq_low_thresh = input;
 
 	return count;
 }
 
-static ssize_t store_check_interval_ms(struct kobject *a, struct attribute *b,
-				   const char *buf, size_t count)
-{
-	unsigned int input;
-	int ret;
-	ret = sscanf(buf, "%u", &input);
-	if (ret != 1)
-		return -EINVAL;
-
-	msm_thermal_tuners_ins.check_interval_ms = input;
-
-	return count;
-}
-
-
-define_one_global_rw(allowed_max_high);
-define_one_global_rw(allowed_max_low);
-define_one_global_rw(allowed_max_freq);
-define_one_global_rw(allowed_mid_high);
-define_one_global_rw(allowed_mid_low);
-define_one_global_rw(allowed_mid_freq);
-define_one_global_rw(allowed_low_high);
-define_one_global_rw(allowed_low_low);
-define_one_global_rw(allowed_low_freq);
-define_one_global_rw(check_interval_ms);
+define_one_global_rw(trip_high_thresh);
+define_one_global_rw(reset_high_thresh);
+define_one_global_rw(freq_high_thresh);
+define_one_global_rw(trip_mid_thresh);
+define_one_global_rw(reset_mid_thresh);
+define_one_global_rw(freq_mid_thresh);
+define_one_global_rw(trip_low_thresh);
+define_one_global_rw(reset_low_thresh);
+define_one_global_rw(freq_low_thresh);
 
 static struct attribute *msm_thermal_attributes[] = {
-	&allowed_max_high.attr,
-	&allowed_max_low.attr,
-	&allowed_max_freq.attr,
-	&allowed_mid_high.attr,
-	&allowed_mid_low.attr,
-	&allowed_mid_freq.attr,
-	&allowed_low_high.attr,
-	&allowed_low_low.attr,
-	&allowed_low_freq.attr,
-	&check_interval_ms.attr,
+	&trip_high_thresh.attr,
+	&reset_high_thresh.attr,
+	&freq_high_thresh.attr,
+	&trip_mid_thresh.attr,
+	&reset_mid_thresh.attr,
+	&freq_mid_thresh.attr,
+	&trip_low_thresh.attr,
+	&reset_low_thresh.attr,
+	&freq_low_thresh.attr,
 	NULL
 };
-
 
 static struct attribute_group msm_thermal_attr_group = {
 	.attrs = msm_thermal_attributes,
@@ -465,22 +313,19 @@ static int __init msm_thermal_init(void)
 {
 	int rc, ret = 0;
 
-	enabled = 1;
-	INIT_DELAYED_WORK(&check_temp_work, check_temp);
+	INIT_DELAYED_WORK(&msm_thermal_main_work, msm_thermal_main);
 
-	schedule_delayed_work(&check_temp_work, 0);
+	schedule_delayed_work(&msm_thermal_main_work, 0);
 
 	msm_thermal_kobject = kobject_create_and_add("msm_thermal", kernel_kobj);
 	if (msm_thermal_kobject) {
 		rc = sysfs_create_group(msm_thermal_kobject,
 							&msm_thermal_attr_group);
-		if (rc) {
-			pr_warn("msm_thermal: sysfs: ERROR, could not create sysfs group");
-		}
+		if (rc)
+			pr_err(THERM_LOG "sysfs: ERROR, could not create sysfs group");
 	} else
-		pr_warn("msm_thermal: sysfs: ERROR, could not create sysfs kobj");
+		pr_err(THERM_LOG "sysfs: ERROR, could not create sysfs kobj");
 
 	return ret;
 }
-fs_initcall(msm_thermal_init);
-
+late_initcall(msm_thermal_init);
