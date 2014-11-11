@@ -69,6 +69,23 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq)
 	struct cpu_freq *limit = &per_cpu(cpu_freq_info, policy->cpu);
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
 
+	/* sync freq limits of all cpus with cpu0 */
+	if (policy->cpu >= 1) {
+		struct cpufreq_policy *cpu_policy = cpufreq_cpu_get(0);
+
+		if (policy->min != cpu_policy->min) {
+			policy->min = cpu_policy->min;
+			policy->user_policy.min = policy->min;
+		}
+
+		if (policy->max != cpu_policy->max) {
+			policy->max = cpu_policy->max;
+			policy->user_policy.max = policy->max;
+		}
+
+		cpufreq_cpu_put(cpu_policy);
+	}
+
 	if (limit->limits_init) {
 		if (new_freq > limit->allowed_max) {
 			new_freq = limit->allowed_max;
