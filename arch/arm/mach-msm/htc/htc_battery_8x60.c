@@ -37,6 +37,7 @@
 #include <linux/android_alarm.h>
 #include <linux/suspend.h>
 #include <linux/earlysuspend.h>
+#include <linux/rtc.h>
 
 #define BATT_SUSPEND_CHECK_TIME			3600
 #define BATT_TIMER_CHECK_TIME			360

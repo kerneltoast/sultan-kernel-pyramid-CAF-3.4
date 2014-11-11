@@ -77,6 +77,13 @@ static struct work_struct batt_charger_ctrl_work;
 struct workqueue_struct *batt_charger_ctrl_wq;
 static unsigned int charger_ctrl_stat;
 
+static int htc_batt_level = 66;
+
+int htc_get_batt_level(void)
+{
+	return htc_batt_level;
+}
+
 static enum power_supply_property htc_battery_properties[] = {
 	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_HEALTH,
@@ -703,6 +710,8 @@ int htc_battery_core_update_changed(void)
 			battery_core_info.rep.full_bat,
 			battery_core_info.rep.over_vchg,
 			battery_core_info.rep.batt_state);
+
+	htc_batt_level = battery_core_info.rep.level;
 
 	/* send uevent if need */
 	if (is_send_batt_uevent) {

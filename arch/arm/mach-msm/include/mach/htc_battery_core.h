@@ -15,7 +15,6 @@
 #include <mach/board.h>
 #include <linux/notifier.h>
 #include <linux/power_supply.h>
-#include <linux/rtc.h>
 #include <mach/htc_battery_common.h>
 
 #define BATT_LOG(x...) do { \
@@ -78,6 +77,7 @@ struct htc_battery_core {
 #ifdef CONFIG_HTC_BATT_CORE
 extern int htc_battery_core_update_changed(void);
 extern int htc_battery_core_register(struct device *dev, struct htc_battery_core *htc_battery);
+int htc_get_batt_level(void);
 #else
 static int htc_battery_core_update_changed(void) { return 0; }
 static int htc_battery_core_register(struct device *dev, struct htc_battery_core *htc_battery) { return 0; }
