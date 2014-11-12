@@ -60,6 +60,8 @@ static struct msm_thermal_tuners {
 
 static void update_maxfreq(struct cpufreq_policy *policy, unsigned int maxfreq)
 {
+	if (policy->user_policy.min > maxfreq)
+		policy->user_policy.min = 192000;
 	policy->user_policy.max = maxfreq;
 	cpufreq_update_policy(0);
 	pr_warn(THERM_LOG "Setting CPU max frequency to %d\n", maxfreq);
