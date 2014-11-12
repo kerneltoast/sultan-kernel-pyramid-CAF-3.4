@@ -73,17 +73,20 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq)
 	if (policy->cpu >= 1) {
 		struct cpufreq_policy *cpu_policy = cpufreq_cpu_get(0);
 
-		if (policy->min != cpu_policy->min) {
-			policy->min = cpu_policy->min;
-			policy->user_policy.min = policy->min;
-		}
+		if (likely(cpu_policy)) {
+			if (policy->min != cpu_policy->min) {
+				policy->min = cpu_policy->min;
+				policy->user_policy.min = policy->min;
+			}
 
-		if (policy->max != cpu_policy->max) {
-			policy->max = cpu_policy->max;
-			policy->user_policy.max = policy->max;
-		}
+			if (policy->max != cpu_policy->max) {
+				policy->max = cpu_policy->max;
+				policy->user_policy.max = policy->max;
+			}
 
-		cpufreq_cpu_put(cpu_policy);
+			cpufreq_cpu_put(cpu_policy);
+		} else
+			pr_err("%s: Error acquiring CPU0 policy!\n", __func__);
 	}
 
 	if (limit->limits_init) {
