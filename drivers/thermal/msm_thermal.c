@@ -83,6 +83,11 @@ static void msm_thermal_main(struct work_struct *work)
 
 	policy = cpufreq_cpu_get(0);
 
+	if (unlikely(!policy)) {
+		pr_err(THERM_LOG "Error acquiring CPU0 policy!\n");
+		goto reschedule;
+	}
+
 	if (!thermal_throttled || saved_maxfreq < policy->user_policy.max)
 		saved_maxfreq = policy->user_policy.max;
 
