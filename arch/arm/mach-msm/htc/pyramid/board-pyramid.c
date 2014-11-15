@@ -2297,6 +2297,14 @@ static void __init pyramid_map_io(void)
 		pr_err("socinfo_init() failed!\n");
 }
 
+static void __init msm8x60_gfx_init(void)
+{
+	msm8x60_check_2d_hardware();
+	platform_device_register(&msm_kgsl_3d0);
+	platform_device_register(&msm_kgsl_2d0);
+	platform_device_register(&msm_kgsl_2d1);
+}
+
 static void __init pyramid_init(void)
 {
         int rc;
@@ -2333,7 +2341,7 @@ static void __init pyramid_init(void)
 	pyramid_init_pmic();
 
         msm8x60_i2c_init();
-	platform_device_register(&msm_kgsl_3d0);
+        msm8x60_gfx_init();
 
 	soc_platform_version = socinfo_get_platform_version();
 	if (SOCINFO_VERSION_MAJOR(soc_platform_version) == 1 &&
