@@ -235,17 +235,6 @@ set_vdd_bail:
 	return -EIO;
 }
 
-/**
- * msm_spm_get_vdd(): Get core voltage
- * @cpu: core id
- * @return: Returns encoded PMIC data.
- */
-unsigned int msm_spm_get_vdd(unsigned int cpu)
-{
-	struct msm_spm_device *dev = &per_cpu(msm_spm_devices, cpu);
-	return dev->reg_shadow[MSM_SPM_REG_SAW_VCTL];
-}
-
 void msm_spm_reinit(void)
 {
 	struct msm_spm_device *dev = &__get_cpu_var(msm_spm_devices);
