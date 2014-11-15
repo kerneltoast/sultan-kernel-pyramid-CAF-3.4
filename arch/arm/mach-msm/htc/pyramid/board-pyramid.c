@@ -1805,7 +1805,6 @@ static struct platform_device *pyramid_devices[] __initdata = {
 #endif
 	&msm8660_iommu_domain_device,
 	&scm_log_device,
-	&msm8660_pm_8x60,
 };
 
 static struct memtype_reserve msm8x60_reserve_table[] __initdata = {
