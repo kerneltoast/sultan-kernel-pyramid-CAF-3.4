@@ -13,6 +13,7 @@
  *
  */
 
+#include <linux/cpu_boost.h>
 #include <linux/delay.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
@@ -422,6 +423,11 @@ static void report_psensor_input_event(struct isl29028_info *lpi,
 		IPS("%s: Proximity adc value not as expected!\n", __func__);
 
 	IPS("proximity %s\n", val ? "FAR" : "NEAR");
+
+	if (val)
+		cpu_boost_startup();
+	else
+		cpu_boost_shutdown();
 
 	if (lpi->debounce == 1) {
 		if (val == 0) {
