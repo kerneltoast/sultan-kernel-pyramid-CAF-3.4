@@ -16,6 +16,7 @@
 
 #define ADC_REPLY_ARRAY_SIZE		5
 
+/* ioctl define */
 #define HTC_BATT_IOCTL_MAGIC		0xba
 
 #define DEBUG_LOG_LENGTH		1024
@@ -32,8 +33,6 @@
 	_IOW(HTC_BATT_IOCTL_MAGIC, 5, unsigned int)
 #define HTC_BATT_IOCTL_UPDATE_BATT_INFO \
 	_IOW(HTC_BATT_IOCTL_MAGIC, 6, struct battery_info_reply)
-#define HTC_BATT_IOCTL_UPDATE_BATT_INFO_COMPAT \
-	_IOW(HTC_BATT_IOCTL_MAGIC, 6, struct battery_info_reply_compat)
 #define HTC_BATT_IOCTL_BATT_DEBUG_LOG \
 	_IOW(HTC_BATT_IOCTL_MAGIC, 7, char[DEBUG_LOG_LENGTH])
 #define HTC_BATT_IOCTL_SET_VOLTAGE_ALARM \
@@ -73,6 +72,7 @@ struct battery_vol_alarm {
 	int enable;
 };
 
+/* information about the system we're running on */
 extern unsigned int system_rev;
 
 enum {
