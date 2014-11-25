@@ -18,7 +18,6 @@
 #include "../../../../drivers/video/msm/mdp.h"
 #include "../../../../drivers/video/msm/mdp4.h"
 #include "../../../../drivers/video/msm/msm_fb_panel.h"
-#include <linux/cpu_boost.h>
 #include <linux/gpio.h>
 #include <mach/gpio.h>
 #include <mach/panel_id.h>
@@ -1096,7 +1095,6 @@ int mipi_dsi_panel_power(int on)
 	if (on) {
                 if (bPanelPowerOn) return 0;
 
-		cpu_boost_timeout(1512000, 5000);
 		if (regulator_enable(l1_3v)) {
 			pr_err("[DISP] %s: Unable to enable the regulator:"
 					" l1_3v\n", __func__);
