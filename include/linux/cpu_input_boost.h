@@ -17,6 +17,8 @@
 #ifndef _LINUX_CPU_INPUT_BOOST_H
 #define _LINUX_CPU_INPUT_BOOST_H
 
+#include <linux/percpu.h>
+
 #ifdef CONFIG_CPU_INPUT_BOOST
 struct boost_policy {
 	unsigned int boost_freq;
